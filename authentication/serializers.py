@@ -1,9 +1,9 @@
-from .models import User
 from rest_framework import serializers
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
