@@ -2,179 +2,27 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth.password_validation import validate_password
 
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """
-    Serializer for user registration
-    Handles password hashing and validation
-    """
-    password = serializers.CharField(
-        write_only=True,
-        required=True,
-        validators=[validate_password],
-        style={'input_type': 'password'}
-    )
-    password2 = serializers.CharField(
-        write_only=True,
-        required=True,
-        style={'input_type': 'password'},
-        label="Confirm Password"
-    )
-    
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = (
-            'id', 'email', 'first_name', 'last_name',
-            'user_type', 'phone_number', 'password', 'password2'
-        )
-        read_only_fields = ('id',)
-    
-    def validate(self, attrs):
-        """
-        Validate that passwords match
-        This runs AFTER individual field validation
-        """
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError({
-                "password": "Password fields didn't match."
-            })
-        return attrs
-    
+        fields = '__all__'  # include all fields from the User model
+
     def create(self, validated_data):
-        """
-        Create user with hashed password
-        Remove password2 as it's not a model field
-        """
-        # Remove password2 from validated data
-        validated_data.pop('password2')
-        
-        # Extract password
+        # Extract password to hash it
         password = validated_data.pop('password')
-        
-        # Create user instance
-        user = User.objects.create_user(
-            password=password,
-            **validated_data
-        )
-        
+        user = User.objects.create_user(password=password, **validated_data)
         return user
-
-
-class UserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for user details (read operations)
-    Used for retrieving user information
-    """
-    full_name = serializers.SerializerMethodField()
-    user_type_display = serializers.CharField(source='get_user_type_display', read_only=True)
-    
-    class Meta:
-        model = User
-        fields = (
-            'id', 'email', 'first_name', 'last_name', 'full_name',
-            'user_type', 'user_type_display', 'phone_number',
-            'is_active', 'date_joined', 'last_login'
-        )
-        read_only_fields = (
-            'id', 'date_joined', 'last_login', 'is_active'
-        )
-    
-    def get_full_name(self, obj):
-        """Custom method field to get full name"""
-        return f"{obj.first_name} {obj.last_name}".strip()
-
-
-class UserUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating user profile
-    Excludes sensitive fields like password and user_type
-    """
-    class Meta:
-        model = User
-        fields = (
-            'first_name', 'last_name', 'phone_number'
-        )
-    
-    def validate_phone_number(self, value):
-        """
-        Custom validation for phone number
-        Ensure it's not already taken by another user
-        """
-        user = self.context['request'].user
-        if User.objects.exclude(pk=user.pk).filter(phone_number=value).exists():
-            raise serializers.ValidationError("This phone number is already in use.")
-        return value
-
-
-class ChangePasswordSerializer(serializers.Serializer):
-    """
-    Serializer for password change endpoint
-    Requires old password and validates new password
-    """
-    old_password = serializers.CharField(
-        required=True,
-        write_only=True,
-        style={'input_type': 'password'}
-    )
-    new_password = serializers.CharField(
-        required=True,
-        write_only=True,
-        validators=[validate_password],
-        style={'input_type': 'password'}
-    )
-    new_password2 = serializers.CharField(
-        required=True,
-        write_only=True,
-        style={'input_type': 'password'},
-        label="Confirm New Password"
-    )
-    
-    def validate_old_password(self, value):
-        """Validate that old password is correct"""
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Old password is incorrect.")
-        return value
-    
-    def validate(self, attrs):
-        """Validate that new passwords match"""
-        if attrs['new_password'] != attrs['new_password2']:
-            raise serializers.ValidationError({
-                "new_password": "New password fields didn't match."
-            })
-        return attrs
-    
-    def save(self, **kwargs):
-        """Update user's password"""
-        user = self.context['request'].user
-        user.set_password(self.validated_data['new_password'])
-        user.save()
-        return user
-
 
 class LoginSerializer(TokenObtainPairSerializer):
     """
     Serializer for user login
     Handles email/password authentication and returns JWT tokens
-    
-    Usage in views:
-        POST /api/auth/login/
-        Body: {"email": "user@example.com", "password": "pass123"}
-        
-    Response:
-        {
-            "access": "jwt_access_token...",
-            "refresh": "jwt_refresh_token...",
-            "user": {
-                "id": 1,
-                "email": "user@example.com",
-                "first_name": "John",
-                "last_name": "Doe",
-                "user_type": "patient"
-            }
-        }
     """
     @classmethod
     def get_token(cls, user):
@@ -205,17 +53,108 @@ class LoginSerializer(TokenObtainPairSerializer):
         return data
 
 
-class UserListSerializer(serializers.ModelSerializer):
-    """
-    Minimal serializer for listing users
-    Used in dropdowns, selections, etc.
-    """
-    display_name = serializers.SerializerMethodField()
+# class UserSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for user details (read operations)
+#     Used for retrieving user information
+#     """
+#     full_name = serializers.SerializerMethodField()
+#     user_type_display = serializers.CharField(source='get_user_type_display', read_only=True)
     
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'display_name', 'user_type')
+#     class Meta:
+#         model = User
+#         fields = (
+#             'id', 'email', 'first_name', 'last_name', 'full_name',
+#             'user_type', 'user_type_display', 'phone_number',
+#             'is_active', 'date_joined', 'last_login'
+#         )
+#         read_only_fields = (
+#             'id', 'date_joined', 'last_login', 'is_active'
+#         )
     
-    def get_display_name(self, obj):
-        full_name = f"{obj.first_name} {obj.last_name}".strip()
-        return f"{full_name} ({obj.get_user_type_display()})"
+#     def get_full_name(self, obj):
+#         """Custom method field to get full name"""
+#         return f"{obj.first_name} {obj.last_name}".strip()
+
+
+# class UserUpdateSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for updating user profile
+#     Excludes sensitive fields like password and user_type
+#     """
+#     class Meta:
+#         model = User
+#         fields = (
+#             'first_name', 'last_name', 'phone_number'
+#         )
+    
+#     def validate_phone_number(self, value):
+#         """
+#         Custom validation for phone number
+#         Ensure it's not already taken by another user
+#         """
+#         user = self.context['request'].user
+#         if User.objects.exclude(pk=user.pk).filter(phone_number=value).exists():
+#             raise serializers.ValidationError("This phone number is already in use.")
+#         return value
+
+
+# class ChangePasswordSerializer(serializers.Serializer):
+#     """
+#     Serializer for password change endpoint
+#     Requires old password and validates new password
+#     """
+#     old_password = serializers.CharField(
+#         required=True,
+#         write_only=True,
+#         style={'input_type': 'password'}
+#     )
+#     new_password = serializers.CharField(
+#         required=True,
+#         write_only=True,
+#         validators=[validate_password],
+#         style={'input_type': 'password'}
+#     )
+#     new_password2 = serializers.CharField(
+#         required=True,
+#         write_only=True,
+#         style={'input_type': 'password'},
+#         label="Confirm New Password"
+#     )
+    
+#     def validate_old_password(self, value):
+#         """Validate that old password is correct"""
+#         user = self.context['request'].user
+#         if not user.check_password(value):
+#             raise serializers.ValidationError("Old password is incorrect.")
+#         return value
+    
+#     def validate(self, attrs):
+#         """Validate that new passwords match"""
+#         if attrs['new_password'] != attrs['new_password2']:
+#             raise serializers.ValidationError({
+#                 "new_password": "New password fields didn't match."
+#             })
+#         return attrs
+    
+#     def save(self, **kwargs):
+#         """Update user's password"""
+#         user = self.context['request'].user
+#         user.set_password(self.validated_data['new_password'])
+#         user.save()
+#         return user
+
+# class UserListSerializer(serializers.ModelSerializer):
+#     """
+#     Minimal serializer for listing users
+#     Used in dropdowns, selections, etc.
+#     """
+#     display_name = serializers.SerializerMethodField()
+    
+#     class Meta:
+#         model = User
+#         fields = ('id', 'email', 'display_name', 'user_type')
+    
+#     def get_display_name(self, obj):
+#         full_name = f"{obj.first_name} {obj.last_name}".strip()
+#         return f"{full_name} ({obj.get_user_type_display()})"

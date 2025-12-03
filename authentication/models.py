@@ -19,6 +19,7 @@ class UserManager(BaseUserManager):
             first_name=first_name,
             last_name=last_name,
             email=email,
+            **extra_fields
         )
         user.set_password(password)
         user.save(using=self._db)
@@ -73,6 +74,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         PHARMACIST = 'pharmacist', _('Pharmacist')
         LAB_TECHNICIAN = 'lab_tech', _('Lab Technician')
     
+    class genderType(models.TextChoices):
+        MALE = 'male', _('Male')
+        FEMALE = 'female', _('Female')
+        OTHER = 'other', _('Other')
+        
     # Phone number validator
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
@@ -83,6 +89,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     email = models.EmailField(max_length=100, unique=True, db_index=True)
+    gender = models.CharField(choices=genderType.choices, max_length=10, blank=True, null=True)
+    emergency_contact = models.CharField(max_length=100, blank=True, null=True)
+    emergency_phone = models.CharField(max_length=17, blank=True, null=True, validators=[phone_regex])
+    address = models.TextField(blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
     
     # Hospital-specific fields
     user_type = models.CharField(
