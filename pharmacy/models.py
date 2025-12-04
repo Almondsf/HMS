@@ -1,6 +1,6 @@
 from django.db import models
 from helpers.models import TrackingModel
-from clinical.models import Consultation, Prescription
+from clinical.models import Prescription
 from profiles.models import PharmacistProfile
 
 
@@ -18,10 +18,11 @@ class Drug(TrackingModel):
 
 # Dispense Transaction
 class DispenseTransaction(TrackingModel):
-    consultation = models.ForeignKey(
-        Consultation,
+    prescription = models.ForeignKey(
+        Prescription,
         on_delete=models.CASCADE,
-        related_name='dispense_transactions'
+        related_name='dispense_transactions',
+        default=1
     )
     pharmacist = models.ForeignKey(
         PharmacistProfile,
@@ -33,14 +34,19 @@ class DispenseTransaction(TrackingModel):
 
     def __str__(self):
         return f"Dispense Transaction for {self.patient.get_full_name()} ({self.dispensed_at})"
-
-    @property
+    @property 
     def patient(self):
-        return self.consultation.visit.patient
-
-    @property
+        # Assuming all items in the transaction belong to the same patient
+        first_item = self.items.first()
+        if first_item:
+            return first_item.patient
+        return None
     def doctor(self):
-        return self.consultation.visit.assigned_doctor
+        first_item = self.items.first()
+        if first_item:
+            return first_item.doctor
+        return None
+
 
 
 

@@ -50,7 +50,7 @@ class LabTechProfile(models.Model):
         return f"Lab Technician: {self.user.first_name} {self.user.last_name}"
 
 class PharmacistProfile(models.Model):
-    user = models.OneToOneField('authentication.User', on_delete=models.CASCADE)
+    user = models.OneToOneField('authentication.User', on_delete=models.CASCADE, related_name='pharmacist')
     qualifications = models.TextField(blank=True, null=True)
     years_of_experience = models.PositiveIntegerField(blank=True, null=True)
 
