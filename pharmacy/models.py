@@ -18,12 +18,6 @@ class Drug(TrackingModel):
 
 # Dispense Transaction
 class DispenseTransaction(TrackingModel):
-    prescription = models.ForeignKey(
-        Prescription,
-        on_delete=models.CASCADE,
-        related_name='dispense_transactions',
-        default=1
-    )
     pharmacist = models.ForeignKey(
         PharmacistProfile,
         on_delete=models.SET_NULL,
