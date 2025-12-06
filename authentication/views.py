@@ -25,34 +25,35 @@ class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
     permission_classes = [AllowAny]
 
-class LogoutView(generics.GenericAPIView):
-    """
-    API endpoint for user logout
-    Blacklists the refresh token
-    """
-    permission_classes = [IsAuthenticated]
+# class LogoutView(generics.GenericAPIView):
+#     """
+#     API endpoint for user logout
+#     Blacklists the refresh token
+#     """
+#     permission_classes = [IsAuthenticated]
+#     serializer_class =
     
-    def post(self, request):
-        try:
-            refresh_token = request.data.get("refresh")
-            if not refresh_token:
-                return Response(
-                    {"error": "Refresh token is required"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+#     def post(self, request):
+#         try:
+#             refresh_token = request.data.get("refresh")
+#             if not refresh_token:
+#                 return Response(
+#                     {"error": "Refresh token is required"},
+#                     status=status.HTTP_400_BAD_REQUEST
+#                 )
             
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+#             token = RefreshToken(refresh_token)
+#             token.blacklist()
             
-            return Response(
-                {"message": "Successfully logged out"},
-                status=status.HTTP_205_RESET_CONTENT
-            )
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+#             return Response(
+#                 {"message": "Successfully logged out"},
+#                 status=status.HTTP_205_RESET_CONTENT
+#             )
+#         except Exception as e:
+#             return Response(
+#                 {"error": str(e)},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
 
 
 # class UserViewSet(viewsets.ModelViewSet):
