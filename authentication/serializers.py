@@ -11,7 +11,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = '__all__'  # include all fields from the User model
+        # fields = ['']  # include all fields from the User model
+        exclude = ['groups', 'user_permissions']
 
     def create(self, validated_data):
         # Extract password to hash it
