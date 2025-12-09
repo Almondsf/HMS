@@ -84,9 +84,13 @@ WSGI_APPLICATION = 'hms.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 from decouple import config
+import dj_database_url
 
 DATABASES = {
-    'default': {
+    'default': dj_database_url.parse(
+        os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    ) if os.environ.get('DATABASE_URL') else {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME'),
         'USER': config('DB_USER'),
@@ -169,12 +173,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'authentication.User'
 
 
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Only include your own "static" folder (never staticfiles!)
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
-] if os.path.exists(os.path.join(BASE_DIR, 'static')) else []
+] if os.path.isdir(os.path.join(BASE_DIR, 'static')) else []
+
+# WhiteNoise storage (already correct)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

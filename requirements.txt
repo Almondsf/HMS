@@ -1,4 +1,5 @@
 asgiref==3.10.0
+dj-database-url==3.0.1
 Django==5.2.8
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
