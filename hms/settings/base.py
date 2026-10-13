@@ -38,11 +38,13 @@ INSTALLED_APPS = [
     'clinical',
     'lab',
     'pharmacy',
+    'audit',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'audit.context.AuditContextMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -182,6 +184,39 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 SESSION_COOKIE_HTTPONLY = True
+
+
+# Audit & logging
+
+# Behind a proxy/load balancer (Render, nginx) the client IP is in X-Forwarded-For.
+# Only trust it when such a proxy is guaranteed to overwrite the header.
+AUDIT_TRUST_X_FORWARDED_FOR = config('AUDIT_TRUST_X_FORWARDED_FOR', default=False, cast=bool)
+
+LOG_LEVEL = config('LOG_LEVEL', default='INFO')
+LOG_FORMAT = config('LOG_FORMAT', default='json')  # 'json' or 'text'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'request_id': {'()': 'helpers.logging.RequestIdFilter'},
+    },
+    'formatters': {
+        'json': {'()': 'helpers.logging.JsonFormatter'},
+        'text': {'format': '%(asctime)s %(levelname)s [%(name)s] [%(request_id)s] %(message)s'},
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'filters': ['request_id'],
+            'formatter': LOG_FORMAT,
+        },
+    },
+    'root': {'handlers': ['console'], 'level': LOG_LEVEL},
+    'loggers': {
+        'django.db.backends': {'level': 'WARNING'},
+    },
+}
 
 
 # Internationalization

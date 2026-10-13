@@ -21,6 +21,9 @@ if RENDER_EXTERNAL_HOSTNAME:
 if not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS:
     raise ImproperlyConfigured('ALLOWED_HOSTS must list the real hostnames (no "*") in production.')
 
+# Render/most PaaS terminate TLS at a proxy that sets X-Forwarded-For
+AUDIT_TRUST_X_FORWARDED_FOR = config('AUDIT_TRUST_X_FORWARDED_FOR', default=True, cast=bool)
+
 # HTTPS everywhere (TLS terminates at the platform's proxy)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)

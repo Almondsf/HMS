@@ -7,6 +7,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from audit.recorder import Category, record
+
 from . import services
 from .serializers import ChangePasswordSerializer, LoginSerializer, LogoutSerializer, UserSerializer
 
@@ -32,7 +34,9 @@ class LogoutView(APIView):
                 raise TokenError('Token does not belong to this user')
             token.blacklist()
         except TokenError:
+            record('logout_failed', Category.SECURITY)
             return Response({'detail': 'Invalid or expired refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
+        record('logout', Category.SECURITY)
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
@@ -57,4 +61,5 @@ class ChangePasswordView(APIView):
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save(update_fields=['password'])
         services.revoke_all_sessions(request.user)
+        record('password_changed', Category.SECURITY)
         return Response({'detail': 'Password changed. Please sign in again.'})

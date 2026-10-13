@@ -3,6 +3,7 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
+from audit import events
 from lab import services as lab_services
 
 from .models import Consultation, Prescription, Visit
@@ -32,7 +33,16 @@ def record_consultation(*, doctor_user, visit, prescriptions=(), lab_tests=(), l
             tests=lab_tests,
             reason=lab_reason,
         )
+
+    events.publish('clinical.consultation_recorded', resource=consultation, visit_id=visit.pk)
     return consultation
+
+
+def open_visit(serializer):
+    '''Front desk opens a visit (queues the patient for the doctor).'''
+    visit = serializer.save()
+    events.publish('clinical.visit_opened', resource=visit, doctor_id=visit.assigned_doctor_id)
+    return visit
 
 
 def add_prescription(*, consultation, drug=None, medication_name='', **fields):

@@ -4,6 +4,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from audit import events
+
 from .models import TestOrder, TestResult
 
 
@@ -23,6 +25,8 @@ def place_order(*, patient, tests, ordered_by=None, consultation=None, reason=''
     )
     for test in tests:
         TestResult.objects.create(order=order, test=test)
+
+    events.publish('lab.order_placed', resource=order, tests=[test.name for test in tests])
     return order
 
 
@@ -51,6 +55,9 @@ def record_result(*, result, labtech_user, **changes):
     result.labtech = labtech
     result.save()
 
+    if result.status == TestResult.Status.COMPLETED:
+        events.publish('lab.result_completed', resource=result, test=result.test.name, order_id=result.order_id)
+
     _sync_order_status(result.order)
     return result
 
@@ -72,4 +79,6 @@ def _sync_order_status(order):
     if order.status != new_status:
         order.status = new_status
         order.save(update_fields=['status'])
+        if new_status == TestOrder.Status.COMPLETED:
+            events.publish('lab.order_completed', resource=order)
     return order

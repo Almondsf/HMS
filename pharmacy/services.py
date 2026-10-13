@@ -6,6 +6,8 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import F
 
+from audit import events
+from audit.recorder import Category, record
 from clinical.models import Prescription
 
 from .models import DispensedItem, DispenseTransaction, Drug
@@ -75,6 +77,25 @@ def dispense(*, pharmacist_user, items):
             notes=item.get('notes'),
         )
     for drug_id, requested in requested_per_drug.items():
-        Drug.objects.filter(pk=drug_id).update(quantity_in_stock=F('quantity_in_stock') - requested)
+        _deduct_stock(drugs[drug_id], requested, dispense_transaction)
 
+    events.publish(
+        'pharmacy.dispensed', resource=dispense_transaction,
+        patient_id=next(iter(prescriptions.values())).consultation.visit.patient_id,
+        items=[{'drug': item['drug'].pk, 'quantity': item['quantity_dispensed']} for item in items],
+    )
     return dispense_transaction
+
+
+def _deduct_stock(drug, quantity, dispense_transaction):
+    # Atomic SQL update bypasses model signals, so the stock change is audited explicitly
+    Drug.objects.filter(pk=drug.pk).update(quantity_in_stock=F('quantity_in_stock') - quantity)
+    before, drug.quantity_in_stock = drug.quantity_in_stock, drug.quantity_in_stock - quantity
+    record(
+        'update', Category.DATA_CHANGE, resource=drug,
+        changes={'quantity_in_stock': [before, drug.quantity_in_stock]},
+        metadata={'reason': 'dispense', 'dispense_transaction_id': dispense_transaction.pk},
+    )
+    if drug.is_low_stock:
+        events.publish('pharmacy.stock_low', resource=drug,
+                       quantity_in_stock=drug.quantity_in_stock, reorder_level=drug.reorder_level)

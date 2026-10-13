@@ -1,5 +1,7 @@
 """Local development: debug on, permissive defaults, nothing required in .env."""
 
+from decouple import config
+
 from .base import *  # noqa: F401,F403
 from .base import ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, SECRET_KEY
 
@@ -13,3 +15,6 @@ CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS or [
 ]
 
 API_DOCS_PUBLIC = True
+
+# Human-readable logs locally unless LOG_FORMAT says otherwise
+LOGGING['handlers']['console']['formatter'] = config('LOG_FORMAT', default='text')  # noqa: F405

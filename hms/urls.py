@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/', include('clinical.urls')),
     path('api/pharmacy/', include('pharmacy.urls')),
     path('api/lab/', include('lab.urls')),
+    path('api/audit/', include('audit.urls')),
 
     # API docs
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

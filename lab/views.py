@@ -1,6 +1,7 @@
 from django.db.models import Q
 from rest_framework import viewsets
 
+from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, STAFF_ROLES, allow_roles
 
 from .models import LabTest, TestOrder, TestResult
@@ -20,7 +21,7 @@ class LabTestViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
 
-class TestOrderViewSet(viewsets.ModelViewSet):
+class TestOrderViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     serializer_class = TestOrderSerializer
     permission_classes = [allow_roles(read=[Role.ADMIN], write=[Role.DOCTOR, Role.LAB_TECHNICIAN])]
     http_method_names = ['get', 'post', 'head', 'options']
@@ -35,7 +36,7 @@ class TestOrderViewSet(viewsets.ModelViewSet):
         return orders
 
 
-class TestResultViewSet(viewsets.ModelViewSet):
+class TestResultViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     '''Results are created with their order; the lab fills them in with PATCH.'''
     serializer_class = TestResultSerializer
     permission_classes = [allow_roles(read=[Role.DOCTOR, Role.ADMIN], write=[Role.LAB_TECHNICIAN])]

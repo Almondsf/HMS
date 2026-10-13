@@ -1,7 +1,9 @@
 from rest_framework import viewsets
 
+from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
 
+from . import services
 from .models import Consultation, Prescription, Visit
 from .serializers import (
     ConsultationSerializer, PrescriptionDetailSerializer, VisitSerializer, VisitSummarySerializer
@@ -13,7 +15,7 @@ CLINICAL_RECORD_METHODS = ['get', 'post', 'put', 'patch', 'head', 'options']
 CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'lab_orders__results__labtech__user']
 
 
-class VisitViewSet(viewsets.ModelViewSet):
+class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     permission_classes = [allow_roles(
         read=[Role.DOCTOR, Role.NURSE, Role.PATIENT],
         write=[Role.ADMIN, Role.RECEPTIONIST],
@@ -40,6 +42,9 @@ class VisitViewSet(viewsets.ModelViewSet):
 
         return Visit.objects.none()
 
+    def perform_create(self, serializer):
+        services.open_visit(serializer)
+
     def get_serializer_class(self):
         # Front desk manages visits but doesn't need the clinical notes
         if self.request.user.user_type == Role.RECEPTIONIST:
@@ -47,7 +52,7 @@ class VisitViewSet(viewsets.ModelViewSet):
         return VisitSerializer
 
 
-class ConsultationViewSet(viewsets.ModelViewSet):
+class ConsultationViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     '''Creation rules (assigned doctor only) live in clinical.services.record_consultation.'''
     serializer_class = ConsultationSerializer
     permission_classes = [allow_roles(
@@ -74,7 +79,7 @@ class ConsultationViewSet(viewsets.ModelViewSet):
         return Consultation.objects.none()
 
 
-class PrescriptionViewSet(viewsets.ReadOnlyModelViewSet):
+class PrescriptionViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
     '''
     Prescriptions across consultations: the pharmacy's work queue.
     Filter with ?patient=<patient profile id> or ?consultation=<id>.

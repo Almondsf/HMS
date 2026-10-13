@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 
+from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
 
 from .models import DispenseTransaction, Drug
@@ -15,7 +16,7 @@ class DrugViewSet(viewsets.ModelViewSet):
     )]
 
 
-class DispenseTransactionViewSet(viewsets.ModelViewSet):
+class DispenseTransactionViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     '''Stock rules live in pharmacy.services.dispense.'''
     serializer_class = DispenseTransactionSerializer
     queryset = DispenseTransaction.objects.select_related('pharmacist__user').prefetch_related(

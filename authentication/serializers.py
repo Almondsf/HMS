@@ -78,6 +78,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         # Locked accounts are refused even with the right password
         user = User.objects.filter(email__iexact=email).first()
         if user and services.is_locked_out(user):
+            services.record_blocked_login(user)
             raise AuthenticationFailed(self.error_messages['locked'], 'account_locked')
 
         try:
