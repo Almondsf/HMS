@@ -22,6 +22,7 @@ class LoginView(TokenObtainPairView):
 
 class LogoutView(APIView):
     '''Revoke a refresh token so it can't be used to get new access tokens.'''
+
     permission_classes = [IsAuthenticated]
     serializer_class = LogoutSerializer
 
@@ -42,6 +43,7 @@ class LogoutView(APIView):
 
 class MeView(generics.RetrieveUpdateAPIView):
     '''The signed-in user's own account.'''
+
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'patch', 'head', 'options']
@@ -52,6 +54,7 @@ class MeView(generics.RetrieveUpdateAPIView):
 
 class ChangePasswordView(APIView):
     '''Change password and sign out every other session.'''
+
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 

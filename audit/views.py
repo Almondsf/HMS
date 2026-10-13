@@ -16,20 +16,19 @@ class AuditEventViewSet(viewsets.ReadOnlyModelViewSet):
     resource_type, resource_id, request_id, patient (also matches list views
     that showed the patient), since / until (ISO 8601).
     '''
+
     serializer_class = AuditEventSerializer
     permission_classes = [allow_roles(read=[Role.ADMIN])]
 
     def get_queryset(self):
         params = self.request.query_params
-        events = AuditEvent.objects.filter(
-            **{name: params[name] for name in EXACT_FILTERS if name in params}
-        )
+        events = AuditEvent.objects.filter(**{name: params[name] for name in EXACT_FILTERS if name in params})
 
         if 'patient' in params:
             try:
                 patient = int(params['patient'])
             except ValueError:
-                raise ValidationError({'patient': 'Must be a patient id.'})
+                raise ValidationError({'patient': 'Must be a patient id.'}) from None
             events = events.filter(patient_id=patient) | events.filter(metadata__patient_ids__contains=[patient])
 
         for name, lookup in (('since', 'occurred_at__gte'), ('until', 'occurred_at__lte')):

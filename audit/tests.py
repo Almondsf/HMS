@@ -23,9 +23,15 @@ class ChangeTrackingTests(APITestCase):
         self.client.force_authenticate(self.receptionist)
 
     def open_visit(self, **headers):
-        return self.client.post('/api/visits/', {
-            'patient': self.patient.id, 'assigned_doctor': self.doctor.doctorprofile.id, 'reason_for_visit': 'Cough',
-        }, **headers)
+        return self.client.post(
+            '/api/visits/',
+            {
+                'patient': self.patient.id,
+                'assigned_doctor': self.doctor.doctorprofile.id,
+                'reason_for_visit': 'Cough',
+            },
+            **headers,
+        )
 
     def test_create_is_recorded_with_actor_patient_and_request(self):
         response = self.open_visit(HTTP_X_REQUEST_ID='req-12345678', HTTP_USER_AGENT='FrontDesk/1.0')
@@ -56,11 +62,15 @@ class ChangeTrackingTests(APITestCase):
         self.assertFalse(AuditEvent.objects.filter(action='update').exists())
 
     def test_passwords_are_redacted(self):
-        self.client.post('/api/create-profile/patients/', {
-            'user': {'email': 'new@example.com', 'password': 'Sup3r-secret-pw', 'first_name': 'N', 'last_name': 'P'}
-        }, format='json')
+        self.client.post(
+            '/api/create-profile/patients/',
+            {'user': {'email': 'new@example.com', 'password': 'Sup3r-secret-pw', 'first_name': 'N', 'last_name': 'P'}},
+            format='json',
+        )
         new_user = User.objects.get(email='new@example.com')
-        event = AuditEvent.objects.get(action='create', resource_type='authentication.user', resource_id=str(new_user.id))
+        event = AuditEvent.objects.get(
+            action='create', resource_type='authentication.user', resource_id=str(new_user.id)
+        )
         self.assertEqual(event.changes['password'], ['***', '***'])
         self.assertNotIn('Sup3r-secret-pw', str(event.changes))
 
@@ -108,7 +118,9 @@ class SecurityEventTests(APITestCase):
         return self.client.post('/api/auth/login/', {'email': self.user.email, 'password': password})
 
     def actions(self):
-        return list(AuditEvent.objects.filter(category=Category.SECURITY).order_by('id').values_list('action', flat=True))
+        return list(
+            AuditEvent.objects.filter(category=Category.SECURITY).order_by('id').values_list('action', flat=True)
+        )
 
     def test_login_success_and_failure(self):
         self.login('wrong')
@@ -147,8 +159,11 @@ class DomainEventTests(APITestCase):
         self.listen('lab.result_completed')
         labtech = make_user(Role.LAB_TECHNICIAN)
         consultation = make_consultation()
-        order = place_order(patient=consultation.visit.patient, consultation=consultation,
-                            tests=[LabTest.objects.create(name='FBC', cost=1)])
+        order = place_order(
+            patient=consultation.visit.patient,
+            consultation=consultation,
+            tests=[LabTest.objects.create(name='FBC', cost=1)],
+        )
         result = order.results.get()
 
         self.client.force_authenticate(labtech)
@@ -176,13 +191,19 @@ class DomainEventTests(APITestCase):
     def test_dispensing_audits_stock_and_flags_low_stock(self):
         drug = Drug.objects.create(name='Paracetamol', quantity_in_stock=12, reorder_level=5)
         prescription = Prescription.objects.create(
-            consultation=make_consultation(), drug=drug, medication_name='Paracetamol',
-            dosage='1g', frequency='TDS', duration='3 days',
+            consultation=make_consultation(),
+            drug=drug,
+            medication_name='Paracetamol',
+            dosage='1g',
+            frequency='TDS',
+            duration='3 days',
         )
         self.client.force_authenticate(make_user(Role.PHARMACIST))
-        self.client.post('/api/pharmacy/dispense-transactions/', {
-            'items': [{'prescription': prescription.id, 'drug': drug.id, 'quantity_dispensed': 9}]
-        }, format='json')
+        self.client.post(
+            '/api/pharmacy/dispense-transactions/',
+            {'items': [{'prescription': prescription.id, 'drug': drug.id, 'quantity_dispensed': 9}]},
+            format='json',
+        )
 
         stock_change = AuditEvent.objects.get(action='update', resource_type='pharmacy.drug')
         self.assertEqual(stock_change.changes, {'quantity_in_stock': [12, 3]})
@@ -200,8 +221,10 @@ class AppendOnlyTests(APITestCase):
         with self.assertRaises(PermissionError):
             event.delete()
         # Raw/bulk SQL is stopped by the database trigger
-        for attempt in (lambda: AuditEvent.objects.filter(pk=event.pk).update(action='x'),
-                        lambda: AuditEvent.objects.filter(pk=event.pk).delete()):
+        for attempt in (
+            lambda: AuditEvent.objects.filter(pk=event.pk).update(action='x'),
+            lambda: AuditEvent.objects.filter(pk=event.pk).delete(),
+        ):
             with self.assertRaises(DatabaseError), transaction.atomic():
                 attempt()
 

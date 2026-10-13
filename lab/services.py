@@ -20,9 +20,7 @@ def place_order(*, patient, tests, ordered_by=None, consultation=None, reason=''
     if retired:
         raise ValidationError({'tests': f"No longer offered: {', '.join(retired)}"})
 
-    order = TestOrder.objects.create(
-        patient=patient, consultation=consultation, ordered_by=ordered_by, reason=reason
-    )
+    order = TestOrder.objects.create(patient=patient, consultation=consultation, ordered_by=ordered_by, reason=reason)
     for test in tests:
         TestResult.objects.create(order=order, test=test)
 

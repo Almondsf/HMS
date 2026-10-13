@@ -121,8 +121,9 @@ class LegacyLabOrderMigrationTests(TransactionTestCase):
         apps = self.migrate(self.after)
 
         order = apps.get_model('lab', 'TestOrder').objects.get()
-        self.assertEqual((order.patient_id, order.ordered_by_id, order.consultation_id),
-                         (patient.id, doctor.id, consultation.id))
+        self.assertEqual(
+            (order.patient_id, order.ordered_by_id, order.consultation_id), (patient.id, doctor.id, consultation.id)
+        )
         self.assertEqual((order.reason, order.status), ('Typhoid?', 'completed'))
         result = order.results.get()
         self.assertEqual((result.test.name, result.status), ('Widal', 'completed'))

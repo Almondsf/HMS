@@ -25,8 +25,16 @@ class TestResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestResult
         fields = [
-            'id', 'order', 'test', 'test_name', 'normal_range', 'status',
-            'result_value', 'notes', 'labtech_name', 'completed_at',
+            'id',
+            'order',
+            'test',
+            'test_name',
+            'normal_range',
+            'status',
+            'result_value',
+            'notes',
+            'labtech_name',
+            'completed_at',
         ]
         read_only_fields = ['order', 'test', 'completed_at']
 
@@ -34,9 +42,7 @@ class TestResultSerializer(serializers.ModelSerializer):
         return full_name(obj.labtech)
 
     def update(self, instance, validated_data):
-        return services.record_result(
-            result=instance, labtech_user=self.context['request'].user, **validated_data
-        )
+        return services.record_result(result=instance, labtech_user=self.context['request'].user, **validated_data)
 
 
 class TestOrderSerializer(serializers.ModelSerializer):
@@ -48,8 +54,16 @@ class TestOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestOrder
         fields = [
-            'id', 'patient', 'patient_name', 'consultation', 'ordered_by_name',
-            'reason', 'status', 'ordered_at', 'tests', 'results',
+            'id',
+            'patient',
+            'patient_name',
+            'consultation',
+            'ordered_by_name',
+            'reason',
+            'status',
+            'ordered_at',
+            'tests',
+            'results',
         ]
         read_only_fields = ['status', 'ordered_at']
         extra_kwargs = {'patient': {'required': False}}

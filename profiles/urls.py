@@ -1,5 +1,12 @@
 from django.urls import path
-from profiles.views import PatientCreateView, DoctorCreateView, LabTechCreateView, PharmacistCreateView, ReceptionistCreateView
+
+from profiles.views import (
+    DoctorCreateView,
+    LabTechCreateView,
+    PatientCreateView,
+    PharmacistCreateView,
+    ReceptionistCreateView,
+)
 
 urlpatterns = [
     path('patients/', PatientCreateView.as_view(), name='create-patient'),

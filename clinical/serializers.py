@@ -15,8 +15,16 @@ class PrescriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prescription
         fields = [
-            'id', 'drug', 'medication_name', 'dosage', 'frequency', 'duration',
-            'quantity', 'quantity_dispensed', 'instructions', 'created_at',
+            'id',
+            'drug',
+            'medication_name',
+            'dosage',
+            'frequency',
+            'duration',
+            'quantity',
+            'quantity_dispensed',
+            'instructions',
+            'created_at',
         ]
         read_only_fields = ['created_at']
 
@@ -28,6 +36,7 @@ class PrescriptionSerializer(serializers.ModelSerializer):
 
 class PrescriptionDetailSerializer(PrescriptionSerializer):
     '''Prescription with patient context, for the pharmacy queue.'''
+
     patient = serializers.IntegerField(source='consultation.visit.patient_id', read_only=True)
     patient_name = serializers.CharField(source='consultation.visit.patient.user.get_full_name', read_only=True)
     prescribed_by = serializers.CharField(
@@ -41,8 +50,11 @@ class PrescriptionDetailSerializer(PrescriptionSerializer):
 class ConsultationSerializer(serializers.ModelSerializer):
     prescriptions = PrescriptionSerializer(many=True, required=False)
     lab_tests = serializers.PrimaryKeyRelatedField(
-        queryset=LabTest.objects.all(), many=True, write_only=True, required=False,
-        help_text='Lab tests to order with this consultation.'
+        queryset=LabTest.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+        help_text='Lab tests to order with this consultation.',
     )
     lab_reason = serializers.CharField(write_only=True, required=False, allow_blank=True)
     lab_orders = TestOrderSerializer(many=True, read_only=True)
@@ -50,8 +62,19 @@ class ConsultationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Consultation
         fields = [
-            'id', 'visit', 'subjective', 'objective', 'assessment', 'plan', 'follow_up_date',
-            'prescriptions', 'lab_tests', 'lab_reason', 'lab_orders', 'created_at', 'updated_at',
+            'id',
+            'visit',
+            'subjective',
+            'objective',
+            'assessment',
+            'plan',
+            'follow_up_date',
+            'prescriptions',
+            'lab_tests',
+            'lab_reason',
+            'lab_orders',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
 
@@ -79,6 +102,7 @@ class VisitSerializer(serializers.ModelSerializer):
 
 class VisitSummarySerializer(serializers.ModelSerializer):
     '''Visit without clinical notes, for front-desk staff.'''
+
     class Meta:
         model = Visit
         fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status']

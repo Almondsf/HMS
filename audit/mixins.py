@@ -25,7 +25,8 @@ class AuditedReadMixin:
         response = super().list(request, *args, **kwargs)
         page = getattr(self, '_audited_page', None) or []
         record(
-            'list', Category.DATA_ACCESS,
+            'list',
+            Category.DATA_ACCESS,
             resource_type_name=resource_type(self.get_queryset().model),
             metadata={
                 'ids': [obj.pk for obj in page],

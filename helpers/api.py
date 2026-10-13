@@ -32,8 +32,12 @@ def _record_denied(exc, context):
     from audit.recorder import Category, record
 
     request = context.get('request')
-    record('permission_denied', Category.SECURITY, metadata={
-        'method': getattr(request, 'method', ''),
-        'path': getattr(request, 'path', ''),
-        'detail': str(exc),
-    })
+    record(
+        'permission_denied',
+        Category.SECURITY,
+        metadata={
+            'method': getattr(request, 'method', ''),
+            'path': getattr(request, 'path', ''),
+            'detail': str(exc),
+        },
+    )

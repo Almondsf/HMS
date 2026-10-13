@@ -19,8 +19,9 @@ def to_json(value):
     return json.loads(json.dumps(value, cls=DjangoJSONEncoder))
 
 
-def record(action, category, *, resource=None, resource_type_name='', patient_id=None,
-           changes=None, metadata=None, actor=None):
+def record(
+    action, category, *, resource=None, resource_type_name='', patient_id=None, changes=None, metadata=None, actor=None
+):
     '''
     Record an audit event. The actor, client IP, user agent and request id
     are taken from the current request unless given.
@@ -50,7 +51,9 @@ def record(action, category, *, resource=None, resource_type_name='', patient_id
     )
 
     logger.info(
-        '%s %s', category, action,
+        '%s %s',
+        category,
+        action,
         extra={
             'audit_event_id': event.pk,
             'actor_id': event.actor_id,

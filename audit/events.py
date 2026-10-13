@@ -40,6 +40,7 @@ def subscribe(name):
     def decorator(handler):
         _subscribers[name].append(handler)
         return handler
+
     return decorator
 
 

@@ -3,6 +3,7 @@ from django.db import models
 
 class LabTest(models.Model):
     '''Catalogue of tests the lab offers.'''
+
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     normal_range = models.CharField(max_length=100, blank=True, null=True)
@@ -21,28 +22,19 @@ class TestOrder(models.Model):
     A request for one or more tests. Usually raised from a consultation;
     consultation is optional so walk-in lab patients can be served too.
     '''
+
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
         IN_PROGRESS = 'in_progress', 'In Progress'
         COMPLETED = 'completed', 'Completed'
         CANCELLED = 'cancelled', 'Cancelled'
 
-    patient = models.ForeignKey(
-        'profiles.PatientProfile',
-        on_delete=models.PROTECT,
-        related_name='lab_orders'
-    )
+    patient = models.ForeignKey('profiles.PatientProfile', on_delete=models.PROTECT, related_name='lab_orders')
     consultation = models.ForeignKey(
-        'clinical.Consultation',
-        on_delete=models.PROTECT,
-        null=True, blank=True,
-        related_name='lab_orders'
+        'clinical.Consultation', on_delete=models.PROTECT, null=True, blank=True, related_name='lab_orders'
     )
     ordered_by = models.ForeignKey(
-        'profiles.DoctorProfile',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='lab_orders'
+        'profiles.DoctorProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='lab_orders'
     )
     reason = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
@@ -57,6 +49,7 @@ class TestOrder(models.Model):
 
 class TestResult(models.Model):
     '''One test within an order; created pending, filled in by the lab.'''
+
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
         COLLECTED = 'collected', 'Sample Collected'
@@ -66,24 +59,13 @@ class TestResult(models.Model):
 
     FINAL_STATUSES = (Status.COMPLETED, Status.CANCELLED)
 
-    order = models.ForeignKey(
-        TestOrder,
-        on_delete=models.CASCADE,
-        related_name='results'
-    )
-    test = models.ForeignKey(
-        LabTest,
-        on_delete=models.PROTECT,
-        related_name='results'
-    )
+    order = models.ForeignKey(TestOrder, on_delete=models.CASCADE, related_name='results')
+    test = models.ForeignKey(LabTest, on_delete=models.PROTECT, related_name='results')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     result_value = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True, null=True)
     labtech = models.ForeignKey(
-        'profiles.LabTechProfile',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='test_results'
+        'profiles.LabTechProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='test_results'
     )
     completed_at = models.DateTimeField(null=True, blank=True)
 

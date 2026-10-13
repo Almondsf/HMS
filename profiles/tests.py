@@ -9,8 +9,11 @@ from profiles.models import ReceptionistProfile
 def user_payload(**overrides):
     return {
         'user': {
-            'email': 'new.person@example.com', 'password': 'Str0ng-pass!',
-            'first_name': 'New', 'last_name': 'Person', **overrides,
+            'email': 'new.person@example.com',
+            'password': 'Str0ng-pass!',
+            'first_name': 'New',
+            'last_name': 'Person',
+            **overrides,
         }
     }
 
@@ -48,8 +51,6 @@ class ProfileRegistrationAccessTests(APITestCase):
 
     def test_weak_password_rejected(self):
         self.client.force_authenticate(make_user(User.UserType.ADMIN))
-        response = self.client.post(
-            '/api/create-profile/patients/', user_payload(password='12345'), format='json'
-        )
+        response = self.client.post('/api/create-profile/patients/', user_payload(password='12345'), format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(User.objects.filter(email='new.person@example.com').exists())

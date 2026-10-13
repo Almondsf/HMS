@@ -1,0 +1,8 @@
+# Development & CI tooling on top of the production dependencies
+-r requirements.txt
+coverage==7.16.2
+pip-audit==2.10.1
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-django==4.14.0
+ruff==0.17.0

@@ -1,9 +1,7 @@
 from itertools import count
 
 from authentication.models import User
-from profiles.models import (
-    DoctorProfile, PatientProfile, LabTechProfile, PharmacistProfile, ReceptionistProfile
-)
+from profiles.models import DoctorProfile, LabTechProfile, PatientProfile, PharmacistProfile, ReceptionistProfile
 
 PROFILE_MODELS = {
     User.UserType.DOCTOR: DoctorProfile,
@@ -22,8 +20,10 @@ def make_user(user_type, **profile_fields):
     '''Create a user of the given role, plus its profile when the role has one.'''
     n = next(_ids)
     user = User.objects.create_user(
-        first_name='Test', last_name=f'{user_type}{n}',
-        email=f'{user_type}{n}@example.com', password=TEST_PASSWORD,
+        first_name='Test',
+        last_name=f'{user_type}{n}',
+        email=f'{user_type}{n}@example.com',
+        password=TEST_PASSWORD,
         user_type=user_type,
     )
     profile_model = PROFILE_MODELS.get(user_type)

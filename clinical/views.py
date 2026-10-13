@@ -5,9 +5,7 @@ from authentication.permissions import Role, allow_roles
 
 from . import services
 from .models import Consultation, Prescription, Visit
-from .serializers import (
-    ConsultationSerializer, PrescriptionDetailSerializer, VisitSerializer, VisitSummarySerializer
-)
+from .serializers import ConsultationSerializer, PrescriptionDetailSerializer, VisitSerializer, VisitSummarySerializer
 
 # Clinical records are never hard-deleted through the API (no DELETE).
 CLINICAL_RECORD_METHODS = ['get', 'post', 'put', 'patch', 'head', 'options']
@@ -16,10 +14,12 @@ CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'la
 
 
 class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
-    permission_classes = [allow_roles(
-        read=[Role.DOCTOR, Role.NURSE, Role.PATIENT],
-        write=[Role.ADMIN, Role.RECEPTIONIST],
-    )]
+    permission_classes = [
+        allow_roles(
+            read=[Role.DOCTOR, Role.NURSE, Role.PATIENT],
+            write=[Role.ADMIN, Role.RECEPTIONIST],
+        )
+    ]
     http_method_names = CLINICAL_RECORD_METHODS
 
     def get_queryset(self):
@@ -47,18 +47,22 @@ class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         # Front desk manages visits but doesn't need the clinical notes
-        if self.request.user.user_type == Role.RECEPTIONIST:
+        # (getattr: API schema generation runs this with an anonymous user)
+        if getattr(self.request.user, 'user_type', None) == Role.RECEPTIONIST:
             return VisitSummarySerializer
         return VisitSerializer
 
 
 class ConsultationViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     '''Creation rules (assigned doctor only) live in clinical.services.record_consultation.'''
+
     serializer_class = ConsultationSerializer
-    permission_classes = [allow_roles(
-        read=[Role.ADMIN, Role.PATIENT],
-        write=[Role.DOCTOR],
-    )]
+    permission_classes = [
+        allow_roles(
+            read=[Role.ADMIN, Role.PATIENT],
+            write=[Role.DOCTOR],
+        )
+    ]
     http_method_names = CLINICAL_RECORD_METHODS
 
     def get_queryset(self):
@@ -84,6 +88,7 @@ class PrescriptionViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
     Prescriptions across consultations: the pharmacy's work queue.
     Filter with ?patient=<patient profile id> or ?consultation=<id>.
     '''
+
     serializer_class = PrescriptionDetailSerializer
     permission_classes = [allow_roles(read=[Role.PHARMACIST, Role.DOCTOR, Role.PATIENT, Role.ADMIN])]
 

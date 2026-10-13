@@ -43,9 +43,7 @@ class LoginTests(APITestCase):
 class SessionTests(APITestCase):
     def setUp(self):
         self.user = make_user(User.UserType.RECEPTIONIST)
-        tokens = self.client.post(
-            '/api/auth/login/', {'email': self.user.email, 'password': TEST_PASSWORD}
-        ).data
+        tokens = self.client.post('/api/auth/login/', {'email': self.user.email, 'password': TEST_PASSWORD}).data
         self.refresh = tokens['refresh']
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
 
@@ -59,16 +57,20 @@ class SessionTests(APITestCase):
 
     def test_cannot_log_out_someone_elses_token(self):
         other = make_user(User.UserType.DOCTOR)
-        other_refresh = self.client.post(
-            '/api/auth/login/', {'email': other.email, 'password': TEST_PASSWORD}
-        ).data['refresh']
+        other_refresh = self.client.post('/api/auth/login/', {'email': other.email, 'password': TEST_PASSWORD}).data[
+            'refresh'
+        ]
         response = self.client.post('/api/auth/logout/', {'refresh': other_refresh})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_password_change_revokes_sessions(self):
-        response = self.client.post('/api/auth/password/change/', {
-            'old_password': TEST_PASSWORD, 'new_password': 'An0ther-Str0ng-pass!',
-        })
+        response = self.client.post(
+            '/api/auth/password/change/',
+            {
+                'old_password': TEST_PASSWORD,
+                'new_password': 'An0ther-Str0ng-pass!',
+            },
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(self.refresh_works())
 
@@ -94,7 +96,10 @@ class ProductionSettingsTests(SimpleTestCase):
         env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'hms.settings.prod', **env}
         return subprocess.run(
             [sys.executable, 'manage.py', 'check', '--deploy', '--fail-level', 'WARNING'],
-            env=env, capture_output=True, text=True, cwd=settings.BASE_DIR,
+            env=env,
+            capture_output=True,
+            text=True,
+            cwd=settings.BASE_DIR,
         )
 
     def test_refuses_missing_secret_key(self):
@@ -112,3 +117,13 @@ class ProductionSettingsTests(SimpleTestCase):
             SECRET_KEY='k8$Jq2!vX9#pL4@wZ7&nR1^cT6*mB3%hF0(yD5)gS8_eA2+uK7-iO4=oP9~lQ1', ALLOWED_HOSTS='hms.example.com'
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+class ApiDocsTests(APITestCase):
+    def test_schema_is_served(self):
+        response = self.client.get('/api/schema.json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        schema = response.json()
+        # Every endpoint documented, with its request/response models
+        self.assertIn('/visits/', schema['paths'])
+        self.assertIn('Visit', schema['definitions'])

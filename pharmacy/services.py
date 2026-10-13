@@ -53,7 +53,9 @@ def dispense(*, pharmacist_user, items):
     for drug_id, requested in requested_per_drug.items():
         drug = drugs[drug_id]
         if requested > drug.quantity_in_stock:
-            errors.append(f'Insufficient stock for {drug}. Available: {drug.quantity_in_stock}, requested: {requested}.')
+            errors.append(
+                f'Insufficient stock for {drug}. Available: {drug.quantity_in_stock}, requested: {requested}.'
+            )
 
     for prescription_id, requested in requested_per_prescription.items():
         prescription = prescriptions[prescription_id]
@@ -80,7 +82,8 @@ def dispense(*, pharmacist_user, items):
         _deduct_stock(drugs[drug_id], requested, dispense_transaction)
 
     events.publish(
-        'pharmacy.dispensed', resource=dispense_transaction,
+        'pharmacy.dispensed',
+        resource=dispense_transaction,
         patient_id=next(iter(prescriptions.values())).consultation.visit.patient_id,
         items=[{'drug': item['drug'].pk, 'quantity': item['quantity_dispensed']} for item in items],
     )
@@ -92,10 +95,16 @@ def _deduct_stock(drug, quantity, dispense_transaction):
     Drug.objects.filter(pk=drug.pk).update(quantity_in_stock=F('quantity_in_stock') - quantity)
     before, drug.quantity_in_stock = drug.quantity_in_stock, drug.quantity_in_stock - quantity
     record(
-        'update', Category.DATA_CHANGE, resource=drug,
+        'update',
+        Category.DATA_CHANGE,
+        resource=drug,
         changes={'quantity_in_stock': [before, drug.quantity_in_stock]},
         metadata={'reason': 'dispense', 'dispense_transaction_id': dispense_transaction.pk},
     )
     if drug.is_low_stock:
-        events.publish('pharmacy.stock_low', resource=drug,
-                       quantity_in_stock=drug.quantity_in_stock, reorder_level=drug.reorder_level)
+        events.publish(
+            'pharmacy.stock_low',
+            resource=drug,
+            quantity_in_stock=drug.quantity_in_stock,
+            reorder_level=drug.reorder_level,
+        )

@@ -12,8 +12,15 @@ class DrugSerializer(serializers.ModelSerializer):
     class Meta:
         model = Drug
         fields = [
-            'id', 'name', 'description', 'unit', 'quantity_in_stock', 'reorder_level',
-            'is_low_stock', 'created_at', 'updated_at',
+            'id',
+            'name',
+            'description',
+            'unit',
+            'quantity_in_stock',
+            'reorder_level',
+            'is_low_stock',
+            'created_at',
+            'updated_at',
         ]
         read_only_fields = ['created_at', 'updated_at']
 

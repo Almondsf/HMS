@@ -15,18 +15,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     is_admin, is_superuser, is_active) are deliberately not accepted here;
     the role is set by the profile serializer that creates the user.
     '''
-    password = serializers.CharField(
-        write_only=True,
-        validators=[validate_password],
-        style={'input_type': 'password'}
-    )
+
+    password = serializers.CharField(write_only=True, validators=[validate_password], style={'input_type': 'password'})
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'password', 'first_name', 'last_name', 'user_type',
-            'gender', 'date_of_birth', 'phone_number', 'address',
-            'emergency_contact', 'emergency_phone',
+            'id',
+            'email',
+            'password',
+            'first_name',
+            'last_name',
+            'user_type',
+            'gender',
+            'date_of_birth',
+            'phone_number',
+            'address',
+            'emergency_contact',
+            'emergency_phone',
         ]
         read_only_fields = ['id', 'user_type']
 
@@ -39,14 +45,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     '''The signed-in user's own account details.'''
+
     full_name = serializers.CharField(source='get_full_name', read_only=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'first_name', 'last_name', 'full_name', 'user_type',
-            'gender', 'date_of_birth', 'phone_number', 'address',
-            'emergency_contact', 'emergency_phone', 'last_login', 'date_joined',
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'full_name',
+            'user_type',
+            'gender',
+            'date_of_birth',
+            'phone_number',
+            'address',
+            'emergency_contact',
+            'emergency_phone',
+            'last_login',
+            'date_joined',
         ]
         read_only_fields = ['id', 'email', 'user_type', 'last_login', 'date_joined']
 
@@ -56,6 +74,7 @@ class LoginSerializer(TokenObtainPairSerializer):
     Serializer for user login
     Handles email/password authentication and returns JWT tokens
     """
+
     default_error_messages = {
         **TokenObtainPairSerializer.default_error_messages,
         'locked': 'Too many failed login attempts. Try again later.',

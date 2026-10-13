@@ -1,8 +1,10 @@
 from django.db import transaction
 from rest_framework import serializers
-from .models import DoctorProfile, PatientProfile, LabTechProfile, PharmacistProfile, ReceptionistProfile
+
 from authentication.models import User
 from authentication.serializers import UserRegistrationSerializer
+
+from .models import DoctorProfile, LabTechProfile, PatientProfile, PharmacistProfile, ReceptionistProfile
 
 
 class BaseProfileSerializer(serializers.ModelSerializer):
@@ -10,6 +12,7 @@ class BaseProfileSerializer(serializers.ModelSerializer):
     Creates a user and its profile together. Subclasses set `user_type`,
     so the role always matches the profile and can't be chosen by the client.
     '''
+
     user = UserRegistrationSerializer()  # nested serializer for user
     user_type = None
 

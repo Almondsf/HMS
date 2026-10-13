@@ -10,6 +10,7 @@ class AuditEvent(models.Model):
     describe, and must never be rewritten by a cascade. Rows can't be updated
     or deleted (enforced here and by a database trigger, see migration 0002).
     '''
+
     class Category(models.TextChoices):
         DATA_ACCESS = 'data_access', 'Data access'
         DATA_CHANGE = 'data_change', 'Data change'

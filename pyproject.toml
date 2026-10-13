@@ -1,0 +1,50 @@
+[project]
+name = "hms"
+version = "0.1.0"
+description = "Hospital Management System API"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["*/migrations/*", "venv", "staticfiles"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # import sorting
+    "B",       # bugbear: likely bugs
+    "UP",      # modern Python syntax
+    "DJ",      # Django conventions
+    "S",       # bandit: security issues
+]
+ignore = [
+    "DJ001",   # null=True on CharField/TextField: existing schema, change needs data migration
+    "DJ008",   # __str__ on every model: not needed for through/abstract-ish models
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/tests.py" = ["S105", "S106"]          # hard-coded test passwords
+"helpers/testing.py" = ["S105", "S106"]
+"hms/settings/*.py" = ["F403", "F405"]   # settings modules build on `from .base import *`
+
+[tool.ruff.lint.isort]
+known-first-party = ["audit", "authentication", "clinical", "helpers", "hms", "lab", "pharmacy", "profiles"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "hms.settings.test"
+python_files = ["tests.py", "test_*.py"]
+python_classes = ["*Tests"]  # models like lab.TestOrder are not test classes
+addopts = "--strict-markers -p no:cacheprovider"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["*/migrations/*", "venv/*", "manage.py", "hms/asgi.py", "hms/wsgi.py", "*/tests.py"]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true

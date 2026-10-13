@@ -44,11 +44,14 @@ class ClinicalAccessTests(APITestCase):
         self.assertEqual(self.ids(self.client.get('/api/visits/')), {self.my_visit.id})
         self.assertEqual(self.ids(self.client.get('/api/consultations/')), {self.my_consultation.id})
 
-        response = self.client.post('/api/visits/', {
-            'patient': self.patient.patientprofile.id,
-            'assigned_doctor': self.doctor.doctorprofile.id,
-            'reason_for_visit': 'Self-booked',
-        })
+        response = self.client.post(
+            '/api/visits/',
+            {
+                'patient': self.patient.patientprofile.id,
+                'assigned_doctor': self.doctor.doctorprofile.id,
+                'reason_for_visit': 'Self-booked',
+            },
+        )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_receptionist_does_not_see_clinical_notes(self):
@@ -72,8 +75,7 @@ class ClinicalAccessTests(APITestCase):
     def test_doctor_cannot_move_consultation_to_another_doctors_visit(self):
         self.client.force_authenticate(self.doctor)
         response = self.client.patch(
-            f'/api/consultations/{self.my_consultation.id}/',
-            {'visit': self.other_visit.id}, format='json'
+            f'/api/consultations/{self.my_consultation.id}/', {'visit': self.other_visit.id}, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.my_consultation.refresh_from_db()
@@ -85,7 +87,8 @@ class ConsultationWorkflowTests(APITestCase):
         self.doctor = make_user(Role.DOCTOR)
         self.patient = make_user(Role.PATIENT)
         self.visit = Visit.objects.create(
-            patient=self.patient.patientprofile, assigned_doctor=self.doctor.doctorprofile,
+            patient=self.patient.patientprofile,
+            assigned_doctor=self.doctor.doctorprofile,
             reason_for_visit='Fever',
         )
         self.drug = Drug.objects.create(name='Artemether', quantity_in_stock=50)
@@ -93,16 +96,20 @@ class ConsultationWorkflowTests(APITestCase):
         self.client.force_authenticate(self.doctor)
 
     def test_consultation_creates_prescriptions_and_lab_order(self):
-        response = self.client.post('/api/consultations/', {
-            'visit': self.visit.id,
-            'assessment': 'Suspected malaria',
-            'prescriptions': [
-                {'drug': self.drug.id, 'dosage': '80mg', 'frequency': 'BD', 'duration': '3 days', 'quantity': 6},
-                {'medication_name': 'ORS sachet', 'dosage': '1', 'frequency': 'PRN', 'duration': '3 days'},
-            ],
-            'lab_tests': [self.test.id],
-            'lab_reason': 'Confirm malaria',
-        }, format='json')
+        response = self.client.post(
+            '/api/consultations/',
+            {
+                'visit': self.visit.id,
+                'assessment': 'Suspected malaria',
+                'prescriptions': [
+                    {'drug': self.drug.id, 'dosage': '80mg', 'frequency': 'BD', 'duration': '3 days', 'quantity': 6},
+                    {'medication_name': 'ORS sachet', 'dosage': '1', 'frequency': 'PRN', 'duration': '3 days'},
+                ],
+                'lab_tests': [self.test.id],
+                'lab_reason': 'Confirm malaria',
+            },
+            format='json',
+        )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         consultation = Consultation.objects.get(pk=response.data['id'])
@@ -116,25 +123,37 @@ class ConsultationWorkflowTests(APITestCase):
         self.assertEqual(len(response.data['lab_orders']), 1)
 
     def test_prescription_needs_drug_or_name(self):
-        response = self.client.post('/api/consultations/', {
-            'visit': self.visit.id,
-            'prescriptions': [{'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
-        }, format='json')
+        response = self.client.post(
+            '/api/consultations/',
+            {
+                'visit': self.visit.id,
+                'prescriptions': [{'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
+            },
+            format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Consultation.objects.exists())
 
     def test_prescriptions_cannot_be_added_on_update(self):
         consultation = Consultation.objects.create(visit=self.visit)
-        response = self.client.patch(f'/api/consultations/{consultation.id}/', {
-            'prescriptions': [{'medication_name': 'X', 'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
-        }, format='json')
+        response = self.client.patch(
+            f'/api/consultations/{consultation.id}/',
+            {
+                'prescriptions': [{'medication_name': 'X', 'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
+            },
+            format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_pharmacist_sees_prescription_queue(self):
         consultation = Consultation.objects.create(visit=self.visit)
         Prescription.objects.create(
-            consultation=consultation, drug=self.drug, medication_name='Artemether',
-            dosage='80mg', frequency='BD', duration='3 days',
+            consultation=consultation,
+            drug=self.drug,
+            medication_name='Artemether',
+            dosage='80mg',
+            frequency='BD',
+            duration='3 days',
         )
         self.client.force_authenticate(make_user(Role.PHARMACIST))
 

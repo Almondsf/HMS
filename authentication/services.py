@@ -29,8 +29,7 @@ def record_failed_login(email):
     # Unknown emails are logged too: credential-stuffing shows up as many of these
     record('login_failed', Category.SECURITY, actor=user, metadata={'email': email})
     if locked:
-        record('account_locked', Category.SECURITY, actor=user,
-               metadata={'minutes': settings.LOGIN_LOCKOUT_MINUTES})
+        record('account_locked', Category.SECURITY, actor=user, metadata={'minutes': settings.LOGIN_LOCKOUT_MINUTES})
 
 
 def record_blocked_login(user):

@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # Attributes every LogRecord has; anything else was passed via `extra=`
 _STANDARD_ATTRS = set(vars(logging.makeLogRecord({}))) | {'message', 'asctime', 'request_id'}
@@ -21,7 +21,7 @@ class RequestIdFilter(logging.Filter):
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         entry = {
-            'time': datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            'time': datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),

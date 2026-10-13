@@ -27,10 +27,7 @@ def _snapshot(instance, config):
 
 
 def _redact(changes):
-    return {
-        name: ['***', '***'] if name in REDACTED_FIELDS else values
-        for name, values in changes.items()
-    }
+    return {name: ['***', '***'] if name in REDACTED_FIELDS else values for name, values in changes.items()}
 
 
 @receiver(post_init)

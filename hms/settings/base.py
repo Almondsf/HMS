@@ -79,9 +79,7 @@ WSGI_APPLICATION = 'hms.wsgi.application'
 DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, conn_health_checks=True)
-    }
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, conn_health_checks=True)}
 else:
     DATABASES = {
         'default': {
@@ -102,9 +100,7 @@ AUTH_USER_MODEL = 'authentication.User'
 # API
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
@@ -129,19 +125,17 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
-
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 # API docs are open in development and staff-only (admin session) in production
 API_DOCS_PUBLIC = config('API_DOCS_PUBLIC', default=False, cast=bool)
+SWAGGER_USE_COMPAT_RENDERERS = False
 
 
 # Authentication & passwords

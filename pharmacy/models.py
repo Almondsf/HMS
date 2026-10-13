@@ -1,9 +1,11 @@
 from django.db import models
+
 from helpers.models import TrackingModel
 
 
 class Drug(TrackingModel):
     '''Formulary item and its stock level.'''
+
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
     unit = models.CharField(max_length=20, default="unit")  # tablets, ml, capsules, etc.
@@ -20,11 +22,9 @@ class Drug(TrackingModel):
 
 class DispenseTransaction(TrackingModel):
     '''One pharmacy hand-over to a patient; stock moves via its items.'''
+
     pharmacist = models.ForeignKey(
-        'profiles.PharmacistProfile',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='dispense_transactions'
+        'profiles.PharmacistProfile', on_delete=models.SET_NULL, null=True, related_name='dispense_transactions'
     )
     dispensed_at = models.DateTimeField(auto_now_add=True)
 
@@ -45,21 +45,14 @@ class DispenseTransaction(TrackingModel):
 
 class DispensedItem(TrackingModel):
     '''A drug line within a dispense transaction.'''
-    transaction = models.ForeignKey(
-        DispenseTransaction,
-        on_delete=models.CASCADE,
-        related_name='items'
-    )
-    prescription = models.ForeignKey(
-        'clinical.Prescription',
-        on_delete=models.PROTECT,
-        related_name='dispensed_items'
-    )
+
+    transaction = models.ForeignKey(DispenseTransaction, on_delete=models.CASCADE, related_name='items')
+    prescription = models.ForeignKey('clinical.Prescription', on_delete=models.PROTECT, related_name='dispensed_items')
     drug = models.ForeignKey(
         Drug,
         on_delete=models.PROTECT,
         null=True,  # legacy rows; new items always have a drug
-        related_name='dispensed_items'
+        related_name='dispensed_items',
     )
     quantity_dispensed = models.PositiveIntegerField()
     notes = models.TextField(blank=True, null=True)  # Optional for pharmacist remarks

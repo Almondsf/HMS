@@ -5,8 +5,8 @@ Apps register their own models in AppConfig.ready(), e.g.:
     audit.registry.register(Visit, patient=lambda visit: visit.patient_id)
 '''
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 # Never written to the audit log in clear text
 REDACTED_FIELDS = {'password'}
