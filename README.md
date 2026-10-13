@@ -88,9 +88,9 @@ Business events are published from services and delivered **after the transactio
 ```python
 from audit import events
 
+
 @events.subscribe('lab.result_completed')
-def notify_doctor(event):
-    ...  # event.name, event.resource, event.payload
+def notify_doctor(event): ...  # event.name, event.resource, event.payload
 ```
 
 Published today: `clinical.visit_opened`, `clinical.consultation_recorded`, `lab.order_placed`, `lab.result_completed`, `lab.order_completed`, `pharmacy.dispensed`, `pharmacy.stock_low`. Each one is also stored in the audit trail.
