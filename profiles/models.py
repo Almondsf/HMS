@@ -37,8 +37,7 @@ class PatientProfile(models.Model):
     assigned_doctor = models.ForeignKey(DoctorProfile, on_delete=models.SET_NULL, blank=True, null=True)
     
     def __str__(self):
-        
-        return self.user.get_full_name() or self.user.username #
+        return self.user.get_full_name() or self.user.email
     
     
 class LabTechProfile(models.Model):

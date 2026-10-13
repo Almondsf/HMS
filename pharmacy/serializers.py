@@ -1,76 +1,52 @@
-from .models import DispenseTransaction, DispensedItem, Drug
-from clinical.models import Prescription
 from rest_framework import serializers
-from clinical.serializers import ConsultationSerializer, PrescriptionSerializer
-from profiles.serializers import PharmacistSerializer
-from django.db import transaction
+
+from clinical.models import Prescription
+
+from . import services
+from .models import DispensedItem, DispenseTransaction, Drug
+
 
 class DrugSerializer(serializers.ModelSerializer):
+    is_low_stock = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = Drug
-        fields = '__all__'
-        
-    
-       
+        fields = [
+            'id', 'name', 'description', 'unit', 'quantity_in_stock', 'reorder_level',
+            'is_low_stock', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
 class DispensedItemSerializer(serializers.ModelSerializer):
-    drug = serializers.PrimaryKeyRelatedField(queryset=Drug.objects.all()) 
-    prescription = serializers.PrimaryKeyRelatedField(
-        queryset=Prescription.objects.all()
-    )
-    
+    drug = serializers.PrimaryKeyRelatedField(queryset=Drug.objects.all())
+    prescription = serializers.PrimaryKeyRelatedField(queryset=Prescription.objects.all())
+    quantity_dispensed = serializers.IntegerField(min_value=1)
+
     class Meta:
         model = DispensedItem
-        fields = ['id', 'drug', 'prescription', 'quantity_dispensed',]
-        
-    def validate(self, data):
-        drug = data['drug']
-        qty = data['quantity_dispensed']
+        fields = ['id', 'drug', 'prescription', 'quantity_dispensed', 'notes']
 
-        if qty > drug.quantity_in_stock:
-            raise serializers.ValidationError(
-                f"Insufficient stock for {drug.name}. "
-                f"Available: {drug.quantity_in_stock}, Requested: {qty}"
-            )
-            
 
-        return data
-    
-    
 class DispenseTransactionSerializer(serializers.ModelSerializer):
     items = DispensedItemSerializer(many=True)
-    pharmacist = PharmacistSerializer(read_only=True)
+    pharmacist_name = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
 
     class Meta:
         model = DispenseTransaction
-        fields = ['id', 'dispensed_at', 'items', 'pharmacist']
-        
-    def validate(self, data):
-        if not data.get('items'):
-            raise serializers.ValidationError("At least one dispensed item is required.")
-        return data
-    
-    @transaction.atomic
+        fields = ['id', 'dispensed_at', 'pharmacist_name', 'patient_name', 'items']
+
+    def get_pharmacist_name(self, obj):
+        return obj.pharmacist.user.get_full_name() if obj.pharmacist else None
+
+    def get_patient_name(self, obj):
+        return str(obj.patient) if obj.patient else None
+
+    def validate_items(self, items):
+        if not items:
+            raise serializers.ValidationError('At least one dispensed item is required.')
+        return items
+
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
-        pharmacist = self.context['request'].user.pharmacist
-
-        transaction_instance = DispenseTransaction.objects.create(
-            pharmacist=pharmacist,
-            **validated_data
-        )
-
-        for item in items_data:
-            drug = item['drug']
-            qty = item['quantity_dispensed']
-            
-            drug.quantity_in_stock -= qty
-            drug.save()
-            
-            # Create item
-            DispensedItem.objects.create(
-                transaction=transaction_instance,
-                **item
-            )
-            
-
-        return transaction_instance
+        return services.dispense(pharmacist_user=self.context['request'].user, items=validated_data['items'])

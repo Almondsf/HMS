@@ -2,8 +2,10 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from authentication.models import User
-from clinical.models import Visit, Consultation
+from clinical.models import Consultation, Prescription, Visit
 from helpers.testing import make_user
+from lab.models import LabTest
+from pharmacy.models import Drug
 
 Role = User.UserType
 
@@ -73,6 +75,72 @@ class ClinicalAccessTests(APITestCase):
             f'/api/consultations/{self.my_consultation.id}/',
             {'visit': self.other_visit.id}, format='json'
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.my_consultation.refresh_from_db()
         self.assertEqual(self.my_consultation.visit, self.my_visit)
+
+
+class ConsultationWorkflowTests(APITestCase):
+    def setUp(self):
+        self.doctor = make_user(Role.DOCTOR)
+        self.patient = make_user(Role.PATIENT)
+        self.visit = Visit.objects.create(
+            patient=self.patient.patientprofile, assigned_doctor=self.doctor.doctorprofile,
+            reason_for_visit='Fever',
+        )
+        self.drug = Drug.objects.create(name='Artemether', quantity_in_stock=50)
+        self.test = LabTest.objects.create(name='Malaria parasite', cost=1500)
+        self.client.force_authenticate(self.doctor)
+
+    def test_consultation_creates_prescriptions_and_lab_order(self):
+        response = self.client.post('/api/consultations/', {
+            'visit': self.visit.id,
+            'assessment': 'Suspected malaria',
+            'prescriptions': [
+                {'drug': self.drug.id, 'dosage': '80mg', 'frequency': 'BD', 'duration': '3 days', 'quantity': 6},
+                {'medication_name': 'ORS sachet', 'dosage': '1', 'frequency': 'PRN', 'duration': '3 days'},
+            ],
+            'lab_tests': [self.test.id],
+            'lab_reason': 'Confirm malaria',
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        consultation = Consultation.objects.get(pk=response.data['id'])
+        names = set(consultation.prescriptions.values_list('medication_name', flat=True))
+        self.assertEqual(names, {'Artemether', 'ORS sachet'})
+
+        order = consultation.lab_orders.get()
+        self.assertEqual(order.patient, self.patient.patientprofile)
+        self.assertEqual(order.ordered_by, self.doctor.doctorprofile)
+        self.assertEqual(list(order.results.values_list('test__name', flat=True)), ['Malaria parasite'])
+        self.assertEqual(len(response.data['lab_orders']), 1)
+
+    def test_prescription_needs_drug_or_name(self):
+        response = self.client.post('/api/consultations/', {
+            'visit': self.visit.id,
+            'prescriptions': [{'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Consultation.objects.exists())
+
+    def test_prescriptions_cannot_be_added_on_update(self):
+        consultation = Consultation.objects.create(visit=self.visit)
+        response = self.client.patch(f'/api/consultations/{consultation.id}/', {
+            'prescriptions': [{'medication_name': 'X', 'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_pharmacist_sees_prescription_queue(self):
+        consultation = Consultation.objects.create(visit=self.visit)
+        Prescription.objects.create(
+            consultation=consultation, drug=self.drug, medication_name='Artemether',
+            dosage='80mg', frequency='BD', duration='3 days',
+        )
+        self.client.force_authenticate(make_user(Role.PHARMACIST))
+
+        response = self.client.get(f'/api/prescriptions/?patient={self.patient.patientprofile.id}')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        [item] = response.data['results']
+        self.assertEqual(item['patient_name'], self.patient.get_full_name())
+        self.assertEqual(item['quantity_dispensed'], 0)

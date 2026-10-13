@@ -32,3 +32,15 @@ def make_user(user_type, **profile_fields):
             profile_fields.setdefault('specialty', 'General')
         profile_model.objects.create(user=user, **profile_fields)
     return user
+
+
+def make_consultation(doctor=None, patient=None):
+    '''A consultation on a fresh visit between the given (or new) doctor and patient.'''
+    from clinical.models import Consultation, Visit
+
+    doctor = doctor or make_user(User.UserType.DOCTOR)
+    patient = patient or make_user(User.UserType.PATIENT)
+    visit = Visit.objects.create(
+        patient=patient.patientprofile, assigned_doctor=doctor.doctorprofile, reason_for_visit='Checkup'
+    )
+    return Consultation.objects.create(visit=visit)

@@ -12,27 +12,27 @@ CanRegisterPatients = allow_roles(write=[Role.ADMIN, Role.RECEPTIONIST])
 CanRegisterStaff = allow_roles(write=[Role.ADMIN])
 
 
-class patientView(CreateAPIView):
+class PatientCreateView(CreateAPIView):
     permission_classes = [CanRegisterPatients]
     serializer_class = PatientSerializer
     queryset = PatientProfile.objects.all()
 
-class doctorView(CreateAPIView):
+class DoctorCreateView(CreateAPIView):
     permission_classes = [CanRegisterStaff]
     serializer_class = DoctorSerializer
     queryset = DoctorProfile.objects.all()
 
-class labTechView(CreateAPIView):
+class LabTechCreateView(CreateAPIView):
     permission_classes = [CanRegisterStaff]
     serializer_class = LabTechSerializer
     queryset = LabTechProfile.objects.all()
 
-class pharmacistView(CreateAPIView):
+class PharmacistCreateView(CreateAPIView):
     permission_classes = [CanRegisterStaff]
     serializer_class = PharmacistSerializer
     queryset = PharmacistProfile.objects.all()
 
-class receptionistView(CreateAPIView):
+class ReceptionistCreateView(CreateAPIView):
     permission_classes = [CanRegisterStaff]
     serializer_class = ReceptionistSerializer
     queryset = ReceptionistProfile.objects.all()

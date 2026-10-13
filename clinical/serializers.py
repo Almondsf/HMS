@@ -1,59 +1,84 @@
 from rest_framework import serializers
-from .models import Consultation, Visit, Prescription, LabTestOrder
 
- 
-        
+from lab.models import LabTest
+from lab.serializers import TestOrderSerializer
+from pharmacy.models import Drug
+
+from . import services
+from .models import Consultation, Prescription, Visit
+
 
 class PrescriptionSerializer(serializers.ModelSerializer):
+    drug = serializers.PrimaryKeyRelatedField(queryset=Drug.objects.all(), required=False, allow_null=True)
+    quantity_dispensed = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Prescription
-        fields = '__all__'
-        read_only_fields = ('consultation',)
-        
-class LabTestOrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LabTestOrder
-        fields = '__all__'
-        read_only_fields = ('consultation',)
-        
+        fields = [
+            'id', 'drug', 'medication_name', 'dosage', 'frequency', 'duration',
+            'quantity', 'quantity_dispensed', 'instructions', 'created_at',
+        ]
+        read_only_fields = ['created_at']
+
+    def validate(self, attrs):
+        if not (attrs.get('drug') or attrs.get('medication_name')):
+            raise serializers.ValidationError({'medication_name': 'Choose a drug or enter a medication name.'})
+        return attrs
+
+
+class PrescriptionDetailSerializer(PrescriptionSerializer):
+    '''Prescription with patient context, for the pharmacy queue.'''
+    patient = serializers.IntegerField(source='consultation.visit.patient_id', read_only=True)
+    patient_name = serializers.CharField(source='consultation.visit.patient.user.get_full_name', read_only=True)
+    prescribed_by = serializers.CharField(
+        source='consultation.visit.assigned_doctor.user.get_full_name', read_only=True
+    )
+
+    class Meta(PrescriptionSerializer.Meta):
+        fields = ['consultation', 'patient', 'patient_name', 'prescribed_by', *PrescriptionSerializer.Meta.fields]
+
+
 class ConsultationSerializer(serializers.ModelSerializer):
     prescriptions = PrescriptionSerializer(many=True, required=False)
-    lab_orders = LabTestOrderSerializer(many=True, required=False)
+    lab_tests = serializers.PrimaryKeyRelatedField(
+        queryset=LabTest.objects.all(), many=True, write_only=True, required=False,
+        help_text='Lab tests to order with this consultation.'
+    )
+    lab_reason = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    lab_orders = TestOrderSerializer(many=True, read_only=True)
 
     class Meta:
         model = Consultation
         fields = [
-            'id', 'visit', 'subjective', 'objective', 'assessment',
-            'plan', 'follow_up_date', 'prescriptions', 'lab_orders'
+            'id', 'visit', 'subjective', 'objective', 'assessment', 'plan', 'follow_up_date',
+            'prescriptions', 'lab_tests', 'lab_reason', 'lab_orders', 'created_at', 'updated_at',
         ]
+        read_only_fields = ['created_at', 'updated_at']
 
     def create(self, validated_data):
-        prescriptions_data = validated_data.pop('prescriptions', [])
-        lab_orders_data = validated_data.pop('lab_orders', [])
-        consultation = Consultation.objects.create(**validated_data)
+        return services.record_consultation(doctor_user=self.context['request'].user, **validated_data)
 
-        # Create multiple prescriptions
-        for prescription in prescriptions_data:
-            Prescription.objects.create(consultation=consultation, **prescription)
+    def update(self, instance, validated_data):
+        if 'visit' in validated_data and validated_data['visit'] != instance.visit:
+            raise serializers.ValidationError({'visit': "A consultation can't be moved to another visit."})
+        if {'prescriptions', 'lab_tests'} & validated_data.keys():
+            raise serializers.ValidationError(
+                'Prescriptions and lab tests can only be added when the consultation is created.'
+            )
+        validated_data.pop('lab_reason', None)
+        return super().update(instance, validated_data)
 
-        # Create multiple lab orders
-        for lab_order in lab_orders_data:
-            LabTestOrder.objects.create(consultation=consultation, **lab_order)
 
-        return consultation
-
-        
 class VisitSerializer(serializers.ModelSerializer):
     consultations = ConsultationSerializer(many=True, read_only=True)
 
     class Meta:
         model = Visit
-        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'consultations']
+        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status', 'consultations']
 
 
 class VisitSummarySerializer(serializers.ModelSerializer):
     '''Visit without clinical notes, for front-desk staff.'''
     class Meta:
         model = Visit
-        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit']
-       
+        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status']
