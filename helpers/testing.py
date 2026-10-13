@@ -13,6 +13,8 @@ PROFILE_MODELS = {
     User.UserType.RECEPTIONIST: ReceptionistProfile,
 }
 
+TEST_PASSWORD = 'Str0ng-pass!'
+
 _ids = count(1)
 
 
@@ -21,7 +23,7 @@ def make_user(user_type, **profile_fields):
     n = next(_ids)
     user = User.objects.create_user(
         first_name='Test', last_name=f'{user_type}{n}',
-        email=f'{user_type}{n}@example.com', password='Str0ng-pass!',
+        email=f'{user_type}{n}@example.com', password=TEST_PASSWORD,
         user_type=user_type,
     )
     profile_model = PROFILE_MODELS.get(user_type)

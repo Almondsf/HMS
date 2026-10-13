@@ -1,124 +1,60 @@
-from rest_framework import viewsets, status, generics
-from rest_framework.decorators import action
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import (
-    UserRegistrationSerializer,
-    # UserSerializer,
-    # UserUpdateSerializer,
-    # ChangePasswordSerializer,
-    # UserListSerializer,
-    # CustomTokenObtainPairSerializer,
-    LoginSerializer
-)
-from .models import User
-from .permissions import IsAdminOrReceptionist, IsOwnerOrAdmin
+from rest_framework_simplejwt.views import TokenObtainPairView
 
+from . import services
+from .serializers import ChangePasswordSerializer, LoginSerializer, LogoutSerializer, UserSerializer
 
-# class UserRegistrationView(generics.CreateAPIView):
-#     serializer_class = UserRegistrationSerializer
-#     permission_classes = [AllowAny]
 
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
     permission_classes = [AllowAny]
-
-# class LogoutView(generics.GenericAPIView):
-#     """
-#     API endpoint for user logout
-#     Blacklists the refresh token
-#     """
-#     permission_classes = [IsAuthenticated]
-#     serializer_class =
-    
-#     def post(self, request):
-#         try:
-#             refresh_token = request.data.get("refresh")
-#             if not refresh_token:
-#                 return Response(
-#                     {"error": "Refresh token is required"},
-#                     status=status.HTTP_400_BAD_REQUEST
-#                 )
-            
-#             token = RefreshToken(refresh_token)
-#             token.blacklist()
-            
-#             return Response(
-#                 {"message": "Successfully logged out"},
-#                 status=status.HTTP_205_RESET_CONTENT
-#             )
-#         except Exception as e:
-#             return Response(
-#                 {"error": str(e)},
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
 
-# class UserViewSet(viewsets.ModelViewSet):
-#     # queryset = User.objects.all()
-#     serializer_class = UserSerializer
-#     permission_classes = [IsAuthenticated]
-    
-#     def get_queryset(self):
-#         '''Filter users based on permissions'''
-#         user = self.request.user
-#         if user.user_type in ['admin', 'receptionist']:
-#             return User.objects.all()
-#         # Regular users can only see themselves
-#         return User.objects.filter(id=user.id)
-    
-#     def get_serializer_class(self):
-#         """
-#         Use fitting serializers based on type of action
-#         """
-#         if self.action == 'list':
-#             return UserListSerializer
-#         elif self.action in ['update_profile']:
-#             return UserUpdateSerializer
-#         elif self.action == 'change_password':
-#             return ChangePasswordSerializer
-#         return UserSerializer
-    
-#     @action(detail=False, methods=['get'])
-#     def me(self, request):
-#         """
-#         Get current user's profile
-#         """
-#         serializer = self.get_serializer(request.user)
-#         return Response(serializer.data)
-    
-#     @action(detail=False, methods=['put', 'patch'])
-#     def update_profile(self, request):
-#         """
-#         Update current user's profile
-#         """
-#         serializer = self.get_serializer(
-#             request.user,
-#             data=request.data,
-#             partial=True,
-#             context={'request': request}
-#         )
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-        
-#         # Return full user data
-#         return Response(UserSerializer(request.user).data)
-    
-#     @action(detail=False, methods=['post'])
-#     def change_password(self, request):
-#         """
-#         Change current user's password
-#         """
-#         serializer = self.get_serializer(
-#             data=request.data,
-#             context={'request': request}
-#         )
-#         serializer.is_valid(raise_exception=True)
-#         serializer.save()
-        
-#         return Response(
-#             {'message': 'Password updated successfully'},
-#             status=status.HTTP_200_OK
-#         )
+class LogoutView(APIView):
+    '''Revoke a refresh token so it can't be used to get new access tokens.'''
+    permission_classes = [IsAuthenticated]
+    serializer_class = LogoutSerializer
+
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            token = RefreshToken(serializer.validated_data['refresh'])
+            if str(token.get('user_id')) != str(request.user.id):
+                raise TokenError('Token does not belong to this user')
+            token.blacklist()
+        except TokenError:
+            return Response({'detail': 'Invalid or expired refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+class MeView(generics.RetrieveUpdateAPIView):
+    '''The signed-in user's own account.'''
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_object(self):
+        return self.request.user
+
+
+class ChangePasswordView(APIView):
+    '''Change password and sign out every other session.'''
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+        services.revoke_all_sessions(request.user)
+        return Response({'detail': 'Password changed. Please sign in again.'})

@@ -123,7 +123,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     is_admin = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-    
+
+    # Brute-force protection (see authentication.services)
+    failed_login_attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(blank=True, null=True)
+
     # Timestamps
     date_joined = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)

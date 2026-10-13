@@ -6,7 +6,10 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hms.settings')
+    # Dev settings locally; on Render (which sets RENDER=true) build/release
+    # commands must use production settings. DJANGO_SETTINGS_MODULE overrides both.
+    default_settings = 'hms.settings.prod' if os.environ.get('RENDER') else 'hms.settings.dev'
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', default_settings)
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
