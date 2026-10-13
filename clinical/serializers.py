@@ -49,4 +49,11 @@ class VisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Visit
         fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'consultations']
+
+
+class VisitSummarySerializer(serializers.ModelSerializer):
+    '''Visit without clinical notes, for front-desk staff.'''
+    class Meta:
+        model = Visit
+        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit']
        

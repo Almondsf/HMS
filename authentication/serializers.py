@@ -7,12 +7,25 @@ from django.contrib.auth.password_validation import validate_password
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    '''
+    Personal details only. Role and privilege fields (user_type, is_staff,
+    is_admin, is_superuser, is_active) are deliberately not accepted here;
+    the role is set by the profile serializer that creates the user.
+    '''
+    password = serializers.CharField(
+        write_only=True,
+        validators=[validate_password],
+        style={'input_type': 'password'}
+    )
 
     class Meta:
         model = User
-        # fields = ['']  # include all fields from the User model
-        exclude = ['groups', 'user_permissions']
+        fields = [
+            'id', 'email', 'password', 'first_name', 'last_name', 'user_type',
+            'gender', 'date_of_birth', 'phone_number', 'address',
+            'emergency_contact', 'emergency_phone',
+        ]
+        read_only_fields = ['id', 'user_type']
 
     def create(self, validated_data):
         # Extract password to hash it
