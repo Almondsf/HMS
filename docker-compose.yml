@@ -1,0 +1,34 @@
+# Local development: `docker compose up` then open http://localhost:8000/api/docs/
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: hms
+      POSTGRES_USER: hms
+      POSTGRES_PASSWORD: hms
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: hms.settings.dev
+      DATABASE_URL: postgres://hms:hms@db:5432/hms
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app  # live code reload
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

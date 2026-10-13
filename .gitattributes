@@ -1,0 +1,5 @@
+# Store text with LF in the repository regardless of OS
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
