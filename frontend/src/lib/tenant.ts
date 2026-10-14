@@ -11,6 +11,9 @@ interface RuntimeConfig {
   tenantBaseDomain?: string
   /** API address; '' = same origin. May contain {hospital}. */
   apiUrl?: string
+  /** Error monitoring (blank = off) */
+  sentryDsn?: string
+  environment?: string
 }
 
 declare global {

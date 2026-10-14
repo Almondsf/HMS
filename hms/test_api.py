@@ -115,7 +115,7 @@ class WebAppTests(TenantAPITestCase):
                         response = self.client.get(path)
                         self.assertEqual(response.status_code, 200)
                         html = response.content.decode()
-                        self.assertIn('window.__HMS_CONFIG__ = {"tenantBaseDomain": "hms.example", "apiUrl": ""}', html)
+                        self.assertIn('window.__HMS_CONFIG__ = {"tenantBaseDomain": "hms.example", "apiUrl": ""', html)
                         self.assertEqual(response['Cache-Control'], 'no-cache')
 
     def test_without_a_built_app_paths_go_to_the_api_docs(self):

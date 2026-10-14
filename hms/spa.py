@@ -20,7 +20,14 @@ def _index_html():
         return None
     html = index.read_text(encoding='utf-8')
     # Runtime config, so one built frontend works on any domain
-    config = json.dumps({'tenantBaseDomain': settings.TENANT_BASE_DOMAIN, 'apiUrl': ''}).replace('</', '<\\/')
+    config = json.dumps(
+        {
+            'tenantBaseDomain': settings.TENANT_BASE_DOMAIN,
+            'apiUrl': '',
+            'sentryDsn': settings.SENTRY_FRONTEND_DSN,
+            'environment': settings.SENTRY_ENVIRONMENT,
+        }
+    ).replace('</', '<\\/')
     return html.replace('</head>', f'<script>window.__HMS_CONFIG__ = {config}</script></head>', 1)
 
 

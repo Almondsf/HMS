@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { api, restoreSession, session, SESSION_ENDED } from './api'
+import { setMonitoringUser } from './monitoring'
 import type { Role } from './roles'
 
 export interface CurrentUser {
@@ -78,6 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await api('/api/v1/auth/logout/', { method: 'POST', body: {}, anonymous: true }).catch(() => undefined)
     endSession()
   }, [endSession])
+
+  // Error reports carry the user's internal id and role only
+  useEffect(() => setMonitoringUser(user), [user])
 
   const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

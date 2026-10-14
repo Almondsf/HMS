@@ -31,3 +31,17 @@ services:
         sync: false # e.g. yourdomain.com (Render's own hostname is added automatically)
       - key: LOG_FORMAT
         value: json
+      # Error monitoring (optional): create two Sentry projects, Django and React
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_FRONTEND_DSN
+        sync: false
+      # Password reset emails: any SMTP provider (Brevo, Mailgun, SES, Postmark...)
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false # e.g. "St Luke's HMS <no-reply@yourdomain.com>"

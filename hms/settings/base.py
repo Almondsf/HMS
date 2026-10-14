@@ -337,3 +337,20 @@ STORAGES = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# Error monitoring (helpers/monitoring.py): off unless SENTRY_DSN is set.
+# Configured to send no patient data.
+SENTRY_DSN = config('SENTRY_DSN', default='')
+# The web app's own (public) DSN, injected into the page at runtime
+SENTRY_FRONTEND_DSN = config('SENTRY_FRONTEND_DSN', default='')
+SENTRY_ENVIRONMENT = config('SENTRY_ENVIRONMENT', default='production')
+if SENTRY_DSN:
+    from helpers.monitoring import init_sentry
+
+    init_sentry(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        release=config('RENDER_GIT_COMMIT', default=''),  # Render sets the deployed commit
+        traces_sample_rate=config('SENTRY_TRACES_SAMPLE_RATE', default=0.0, cast=float),
+    )

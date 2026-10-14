@@ -254,6 +254,17 @@ Every report takes `?date_from=&date_to=` (`YYYY-MM-DD`, in hospital time). The 
 | `/api/v1/reports/pharmacy/` | Most dispensed drugs, low stock, stock value, drugs without a price | admin, pharmacist |
 | `/api/v1/reports/lab/` | Tests by type and status, average turnaround time, pending work | admin, lab tech |
 
+### Passwords and monitoring
+
+- **Password resets:**
+  - Admins reset a staff member's password from **Staff → Reset password**. This issues a temporary password shown once, signs the person out everywhere and unlocks the account. They must choose their own password at next sign-in.
+  - Staff can also use **Forgot password?** on the sign-in page. The emailed link works once and expires after an hour, and the page never reveals whether an email has an account.
+  - Configure email with the `EMAIL_*` variables (any SMTP provider). Locally, emails print in the `runserver` console.
+- **Error monitoring:** set `SENTRY_DSN` (API) and `SENTRY_FRONTEND_DSN` (web app) to report errors to Sentry, which has a free tier.
+  - Reports include the stack trace, hospital, request id and the user's internal id and role.
+  - **Never** sent: request bodies, query strings (searches can contain patient names), cookies, auth headers, local variables, or names and emails. See [helpers/monitoring.py](helpers/monitoring.py).
+  - In the web app, a crash shows a "Something went wrong" screen instead of a blank page.
+
 ## API conventions
 
 - **Versioned:** every endpoint lives under `/api/v1/`.
