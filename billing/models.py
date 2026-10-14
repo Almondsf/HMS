@@ -63,9 +63,19 @@ class InvoiceQuerySet(models.QuerySet):
             .annotate(total=Sum('amount'))
             .values('total')
         )
+        from insurance.models import Claim
+
+        pending_claims = (
+            Claim.objects.filter(invoice=OuterRef('pk'), status__in=Claim.OPEN_STATUSES)
+            .values('invoice')
+            .annotate(total=Sum(Coalesce('approved_amount', 'claimed_amount')))
+            .values('total')
+        )
+        money = models.DecimalField(**MONEY)
         return self.annotate(
-            _subtotal=Coalesce(Subquery(lines), Value(ZERO), output_field=models.DecimalField(**MONEY)),
-            _paid=Coalesce(Subquery(payments), Value(ZERO), output_field=models.DecimalField(**MONEY)),
+            _subtotal=Coalesce(Subquery(lines), Value(ZERO), output_field=money),
+            _paid=Coalesce(Subquery(payments), Value(ZERO), output_field=money),
+            _pending_insurance=Coalesce(Subquery(pending_claims), Value(ZERO), output_field=money),
         )
 
 
@@ -130,12 +140,27 @@ class Invoice(TrackingModel):
 
     def refresh_totals(self):
         """Drop cached annotations after lines or payments change."""
-        for attribute in ('_subtotal', '_paid'):
+        for attribute in ('_subtotal', '_paid', '_pending_insurance'):
             self.__dict__.pop(attribute, None)
 
     @property
     def balance(self):
         return self.total - self.amount_paid
+
+    @property
+    def pending_insurance(self):
+        '''What open insurance claims are expected to pay (approved amount once approved).'''
+        if hasattr(self, '_pending_insurance'):
+            return self._pending_insurance
+        from insurance.models import Claim
+
+        claims = self.claims.filter(status__in=Claim.OPEN_STATUSES)
+        return sum((claim.approved_amount or claim.claimed_amount for claim in claims), ZERO)
+
+    @property
+    def patient_due(self):
+        '''What the patient still has to pay themselves.'''
+        return max(self.balance - self.pending_insurance, ZERO)
 
 
 class InvoiceLine(TrackingModel):
@@ -180,6 +205,7 @@ class Payment(TrackingModel):
         CARD = 'card', 'Card / POS'
         TRANSFER = 'transfer', 'Bank transfer'
         MOBILE_MONEY = 'mobile_money', 'Mobile money'
+        INSURANCE = 'insurance', 'Insurance / HMO'  # recorded only through insurance claims
 
     receipt_number = models.CharField(max_length=20, unique=True)
     invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='payments')

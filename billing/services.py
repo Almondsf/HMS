@@ -187,13 +187,19 @@ def _settle(invoice):
 
 @transaction.atomic
 def record_payment(*, invoice, amount, method, by, reference=''):
+    '''
+    Take a payment. Patients pay up to `patient_due` (the balance less what
+    open insurance claims will cover); insurance payments come only from
+    claims (insurance.services.record_claim_payment) and may cover the balance.
+    '''
     # Lock the invoice: a double-submitted payment waits, then sees the new balance
     invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
     _require_status(invoice, Status.DRAFT, Status.ISSUED, action='take payment')
     if amount <= 0:
         raise ValidationError({'amount': 'Must be more than 0.'})
-    if amount > invoice.balance:
-        raise ValidationError({'amount': f'More than the balance due ({invoice.balance}).'})
+    limit = invoice.balance if method == Payment.Method.INSURANCE else invoice.patient_due
+    if amount > limit:
+        raise ValidationError({'amount': f'More than the amount due ({limit}).'})
     payment = Payment.objects.create(
         receipt_number=next_record_number('receipt', 'RCT'),
         invoice=invoice,

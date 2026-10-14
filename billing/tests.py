@@ -169,7 +169,7 @@ class PaymentTests(BillingTestCase):
     def test_cannot_overpay_or_pay_void_invoices(self):
         response = self.pay('6000.01')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('balance', str(response.data))
+        self.assertIn('amount due', str(response.data))
         self.assertEqual(self.pay('-5').status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_voiding_a_payment_reopens_the_invoice(self):

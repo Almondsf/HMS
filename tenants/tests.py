@@ -192,7 +192,7 @@ class PlatformHospitalApiTests(PlatformSiteTests):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertEqual(response.data['domains'], ['mercy.localhost'])
-        self.assertEqual(response.data['features'], ['billing', 'clinical', 'lab', 'pharmacy'])
+        self.assertEqual(response.data['features'], ['billing', 'clinical', 'insurance', 'lab', 'pharmacy'])
         password = response.data['admin']['temporary_password']
 
         login = client_for('mercy.localhost').post(

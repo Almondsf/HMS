@@ -35,6 +35,11 @@ class PaymentSerializer(serializers.ModelSerializer):
         ]  # fmt: skip
         read_only_fields = ['receipt_number', 'voided', 'void_reason', 'created_at']
 
+    def validate_method(self, method):
+        if method == Payment.Method.INSURANCE:
+            raise serializers.ValidationError('Insurance payments are recorded on the insurance claim.')
+        return method
+
     def create(self, validated_data):
         return services.record_payment(by=self.context['request'].user, **validated_data)
 
@@ -46,6 +51,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
     total = serializers.DecimalField(**MONEY, read_only=True)
     amount_paid = serializers.DecimalField(**MONEY, read_only=True)
     balance = serializers.DecimalField(**MONEY, read_only=True)
+    pending_insurance = serializers.DecimalField(**MONEY, read_only=True)
+    patient_due = serializers.DecimalField(**MONEY, read_only=True)
     lines = InvoiceLineSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
 
@@ -54,6 +61,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'number', 'patient', 'patient_name', 'patient_mrn', 'visit', 'status',
             'subtotal', 'discount', 'discount_reason', 'total', 'amount_paid', 'balance',
+            'pending_insurance', 'patient_due',
             'issued_at', 'void_reason', 'created_at', 'lines', 'payments',
         ]  # fmt: skip
         read_only_fields = [

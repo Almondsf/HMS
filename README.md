@@ -16,6 +16,7 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 | `tenants` | Hospitals, their addresses, provisioning, the platform site |
 | `terminology` | Shared reference data: ICD-10 diagnosis codes |
 | `billing` | Tariff, invoices built automatically from care, payments, receipts, daily cash summary |
+| `insurance` | HMO / NHIA providers, patient cover, claims and insurer payments |
 
 ## Quick start
 
@@ -86,7 +87,7 @@ The response also lists the `features` the hospital's plan includes, so frontend
 | Plan | Modules |
 |---|---|
 | Basic | Front desk & consultations, Pharmacy, Billing |
-| Pro | + Laboratory |
+| Pro | + Laboratory, HMO / insurance claims |
 | Enterprise | All modules |
 
 Endpoints of a module the plan doesn't include return 403 with an explanation.
@@ -198,6 +199,17 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
   - `GET /api/v1/billing/payments/<id>/receipt/` returns everything needed to print a receipt.
 - **End of day:** `GET /api/v1/billing/summary/?date=` gives money taken by payment method and cashier, charges by category, and the number of outstanding invoices.
 - **Roles:** a new `cashier` role, created at `/api/v1/create-profile/cashiers/`. Patients can see their own invoices and payments.
+
+### HMO / insurance (Pro plan)
+
+- **Setup:** admins register the providers the hospital accepts at `/api/v1/insurance/providers/` (HMO, NHIA, private insurer, corporate retainer). Each provider has a default coverage % and may require pre-authorisation codes. The front desk records patients' cover (member number, validity dates, optional coverage %) at `/api/v1/insurance/coverages/`.
+- **Claims:** `POST /api/v1/insurance/claims/` on an issued invoice. The flow is `draft → submit → respond → pay`, with each step an action on the claim.
+  - While a claim is open, its amount is set aside: the invoice shows `pending_insurance`, and the patient pays only `patient_due`.
+  - A rejection, or the shortfall of a partial approval or short payment, goes back to the patient.
+  - The insurer's payment is recorded as an `insurance` payment, so the invoice settles normally. Insurance payments can only be made through claims.
+- **Checks:** the cover must belong to the patient and be valid on the date of service, providers that require it need an authorisation code, and an invoice can have only one open claim.
+- **Claim document:** `GET /api/v1/insurance/claims/<id>/document/` returns the member details, ICD-10 diagnoses and itemised charges.
+- **Chasing payment:** `GET /api/v1/insurance/claims/outstanding/` shows what each insurer still owes.
 
 ## API conventions
 

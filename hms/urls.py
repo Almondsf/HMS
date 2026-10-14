@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/v1/pharmacy/', include('pharmacy.urls')),
     path('api/v1/lab/', include('lab.urls')),
     path('api/v1/billing/', include('billing.urls')),
+    path('api/v1/insurance/', include('insurance.urls')),
     path('api/v1/audit/', include('audit.urls')),
     # API docs
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
