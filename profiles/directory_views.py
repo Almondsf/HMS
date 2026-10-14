@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from audit.mixins import AuditedReadMixin
+from authentication import password_reset
 from authentication.models import User
 from authentication.permissions import STAFF_ROLES, Role, allow_roles
 from helpers.search import search
@@ -83,6 +84,14 @@ class StaffViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[allow_roles(write=[Role.ADMIN])])
     def activate(self, request, pk=None):
         return self._set_active(request, active=True)
+
+    @action(
+        detail=True, methods=['post'], url_path='reset-password', permission_classes=[allow_roles(write=[Role.ADMIN])]
+    )
+    def reset_password(self, request, pk=None):
+        '''Issue a temporary password (shown once); they must change it at next sign-in.'''
+        password = password_reset.reset_by_admin(user=self.get_object(), by=request.user)
+        return Response({'temporary_password': password}, status=status.HTTP_200_OK)
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):

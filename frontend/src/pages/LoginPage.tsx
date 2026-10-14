@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 
 import { Button, ErrorAlert, Input } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
@@ -15,7 +15,8 @@ export function LoginPage() {
   const [error, setError] = useState<unknown>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const returnTo = (location.state as { from?: string } | null)?.from ?? '/'
+  const state = location.state as { from?: string; notice?: string } | null
+  const returnTo = state?.from ?? '/'
   if (user) return <Navigate to={returnTo} replace />
 
   async function handleSubmit(event: FormEvent) {
@@ -46,6 +47,11 @@ export function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          {state?.notice && !error && (
+            <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+              {state.notice}
+            </p>
+          )}
           <ErrorAlert error={error} />
           <Input
             label="Email"
@@ -67,6 +73,11 @@ export function LoginPage() {
           <Button type="submit" loading={submitting} className="w-full">
             Sign in
           </Button>
+          <p className="text-center text-sm">
+            <Link to="/forgot-password" className="text-brand-600 hover:text-brand-700">
+              Forgot password?
+            </Link>
+          </p>
         </form>
       </div>
     </div>

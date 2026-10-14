@@ -166,6 +166,7 @@ REST_FRAMEWORK = {
         'anon': config('THROTTLE_ANON', default='60/min'),
         'user': config('THROTTLE_USER', default='2000/hour'),
         'login': config('THROTTLE_LOGIN', default='10/min'),
+        'password_reset': config('THROTTLE_PASSWORD_RESET', default='5/hour'),
     },
 }
 
@@ -212,6 +213,22 @@ AUTH_PASSWORD_VALIDATORS = [
 # Account lockout after repeated failed logins
 LOGIN_MAX_FAILED_ATTEMPTS = config('LOGIN_MAX_FAILED_ATTEMPTS', default=5, cast=int)
 LOGIN_LOCKOUT_MINUTES = config('LOGIN_LOCKOUT_MINUTES', default=15, cast=int)
+
+# Password reset links expire after an hour (Django's default is 3 days)
+PASSWORD_RESET_TIMEOUT = 60 * 60
+# Where reset links point. Blank = the hospital's own address (the app is served there).
+# May use {subdomain} or {host}, e.g. http://{subdomain}.localhost:5173 in development.
+FRONTEND_URL = config('FRONTEND_URL', default='')
+
+# Email (password resets). Any SMTP provider works: Brevo, Mailgun, SES, Postmark, Resend...
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='HMS <no-reply@localhost>')
 
 # Obscure the admin path in production (e.g. ADMIN_URL=staff-portal-8f3a/)
 ADMIN_URL = config('ADMIN_URL', default='admin/')

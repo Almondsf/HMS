@@ -21,5 +21,9 @@ CORS_ALLOWED_ORIGIN_REGEXES = CORS_ALLOWED_ORIGIN_REGEXES or [r'^http://([a-z0-9
 API_DOCS_PUBLIC = True
 AUTH_REFRESH_COOKIE_SECURE = False  # local http://
 
+# Emails (password resets) are printed in the runserver console; reset links open the Vite app
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+FRONTEND_URL = config('FRONTEND_URL', default='http://{subdomain}.localhost:5173')
+
 # Human-readable logs locally unless LOG_FORMAT says otherwise
 LOGGING['handlers']['console']['formatter'] = config('LOG_FORMAT', default='text')  # noqa: F405

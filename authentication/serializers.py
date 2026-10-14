@@ -72,8 +72,9 @@ class UserSerializer(serializers.ModelSerializer):
             'emergency_phone',
             'last_login',
             'date_joined',
+            'must_change_password',
         ]
-        read_only_fields = ['id', 'email', 'user_type', 'last_login', 'date_joined']
+        read_only_fields = ['id', 'email', 'user_type', 'last_login', 'date_joined', 'must_change_password']
 
 
 class LoginSerializer(TokenObtainPairSerializer):
@@ -122,6 +123,7 @@ class LoginSerializer(TokenObtainPairSerializer):
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
             'user_type': self.user.user_type,
+            'must_change_password': self.user.must_change_password,
         }
 
         return data
@@ -143,3 +145,13 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate_new_password(self, value):
         validate_password(value, user=self.context['request'].user)
         return value
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, style={'input_type': 'password'})

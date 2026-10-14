@@ -9,6 +9,7 @@ import type { Role } from '@/lib/roles'
 import { currentHospital } from '@/lib/tenant'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { ChangePasswordPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/PasswordPages'
 import { NoHospitalPage, NotFoundPage } from '@/pages/StatusPages'
 
 /** Load a screen only when first opened: smaller downloads on slow connections. */
@@ -72,6 +73,10 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation()
   if (loading) return <Spinner label="Restoring your session" />
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+  // After an admin reset, nothing else opens until the temporary password is replaced
+  if (user.must_change_password && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
   return children
 }
 
@@ -88,6 +93,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         element={
           <RequireAuth>
@@ -96,6 +103,7 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="change-password" element={<ChangePasswordPage />} />
         {ROUTES.map(([path, Screen, roles]) => (
           <Route
             key={path}

@@ -53,6 +53,13 @@ export function useSetStaffActive() {
   })
 }
 
+export function useResetStaffPassword() {
+  return useMutation({
+    mutationFn: (id: number) =>
+      api<{ temporary_password: string }>(`/api/v1/staff/${id}/reset-password/`, { method: 'POST' }),
+  })
+}
+
 export function useDepartments() {
   return useQuery({
     queryKey: ['departments'],

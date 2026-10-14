@@ -1,7 +1,15 @@
 import { UserPlus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
-import { STAFF_ENDPOINTS, useCreateStaff, useDepartments, useSetStaffActive, useStaff, type StaffRole } from '@/api/admin'
+import {
+  STAFF_ENDPOINTS,
+  useCreateStaff,
+  useDepartments,
+  useResetStaffPassword,
+  useSetStaffActive,
+  useStaff,
+  type StaffRole,
+} from '@/api/admin'
 import { SearchBox, useDebounced } from '@/components/frontDesk'
 import { Modal } from '@/components/Modal'
 import { Badge, Button, Card, ErrorAlert, Input, PageHeader, Select, Spinner } from '@/components/ui'
@@ -98,6 +106,8 @@ export function StaffPage() {
   const debounced = useDebounced(search)
   const { data: staff, isLoading, error } = useStaff({ role: role || undefined, search: debounced, is_active: showInactive ? undefined : true })
   const setActive = useSetStaffActive()
+  const resetPassword = useResetStaffPassword()
+  const [temporary, setTemporary] = useState<{ name: string; password: string } | null>(null)
 
   return (
     <>
@@ -109,7 +119,7 @@ export function StaffPage() {
           </Button>
         }
       />
-      <ErrorAlert error={setActive.error} />
+      <ErrorAlert error={setActive.error ?? resetPassword.error} />
       <Card>
         <div className="flex flex-wrap items-end gap-4 border-b border-slate-200 p-4">
           <div className="min-w-60 flex-1">
@@ -145,6 +155,20 @@ export function StaffPage() {
                 </div>
                 <Badge tone="brand">{ROLE_LABELS[member.role as Role] ?? member.role}</Badge>
                 {!member.is_active && <Badge tone="red">Deactivated</Badge>}
+                {member.id !== me.id && member.is_active && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      window.confirm(`Give ${member.full_name} a temporary password? Their current one stops working.`) &&
+                      resetPassword.mutate(member.id, {
+                        onSuccess: (result) => setTemporary({ name: member.full_name, password: result.temporary_password }),
+                      })
+                    }
+                  >
+                    Reset password
+                  </Button>
+                )}
                 {member.id !== me.id &&
                   (member.is_active ? (
                     <Button
@@ -168,6 +192,22 @@ export function StaffPage() {
         )}
       </Card>
       {adding && <AddStaffModal onClose={() => setAdding(false)} />}
+      {temporary && (
+        <Modal open title="Temporary password" onClose={() => setTemporary(null)}>
+          <div className="space-y-4 text-sm text-slate-700">
+            <p>
+              Give this to <strong>{temporary.name}</strong> privately. It is shown only once; they must choose their
+              own password when they sign in.
+            </p>
+            <p className="rounded-lg bg-brand-50 p-3 text-center font-mono text-lg tracking-wider text-brand-800 select-all">
+              {temporary.password}
+            </p>
+            <div className="flex justify-end">
+              <Button onClick={() => setTemporary(null)}>Done</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   )
 }

@@ -112,6 +112,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Brute-force protection (see authentication.services)
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(blank=True, null=True)
+    must_change_password = models.BooleanField(
+        default=False, help_text='Set after an admin reset: the user must choose a new password at next sign-in.'
+    )
 
     # Timestamps
     date_joined = models.DateTimeField(default=timezone.now)

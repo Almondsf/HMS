@@ -10,8 +10,15 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from audit.recorder import Category, record
 
-from . import services
-from .serializers import ChangePasswordSerializer, LoginSerializer, LogoutSerializer, UserSerializer
+from . import password_reset, services
+from .serializers import (
+    ChangePasswordSerializer,
+    ForgotPasswordSerializer,
+    LoginSerializer,
+    LogoutSerializer,
+    ResetPasswordSerializer,
+    UserSerializer,
+)
 from .tokens import TenantTokenRefreshSerializer, check_token_tenant
 
 # ---- Cookie mode (browsers) ----
@@ -136,7 +143,40 @@ class ChangePasswordView(APIView):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data['new_password'])
-        request.user.save(update_fields=['password'])
+        request.user.must_change_password = False
+        request.user.save(update_fields=['password', 'must_change_password'])
         services.revoke_all_sessions(request.user)
         record('password_changed', Category.SECURITY)
         return Response({'detail': 'Password changed. Please sign in again.'})
+
+
+class ForgotPasswordView(APIView):
+    """Email a reset link. Always answers the same way, so it can't reveal who has an account."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password_reset.request_reset(email=serializer.validated_data['email'], request=request)
+        return Response({'detail': 'If that address has an account, a reset link is on its way.'})
+
+
+class ResetPasswordView(APIView):
+    """Set a new password from an emailed link (uid + token). Signs out every session."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+    serializer_class = ResetPasswordSerializer
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password_reset.complete_reset(**serializer.validated_data)
+        return Response({'detail': 'Password changed. You can sign in now.'})

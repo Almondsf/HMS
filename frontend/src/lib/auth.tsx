@@ -11,6 +11,7 @@ export interface CurrentUser {
   last_name: string
   full_name: string
   user_type: Role
+  must_change_password: boolean
 }
 
 interface AuthState {

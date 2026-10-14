@@ -1,4 +1,4 @@
-import { LogOut, Menu, X } from 'lucide-react'
+import { KeyRound, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
 
@@ -101,6 +101,14 @@ export function AppLayout() {
               <p className="text-sm font-medium text-slate-900">{user.full_name}</p>
               <p className="text-xs text-brand-600">{ROLE_LABELS[user.user_type]}</p>
             </div>
+            <NavLink
+              to="/change-password"
+              className="rounded-lg p-2 text-slate-500 hover:bg-brand-50 hover:text-brand-700"
+              aria-label="Change password"
+              title="Change password"
+            >
+              <KeyRound className="size-5" />
+            </NavLink>
             <button
               type="button"
               onClick={() => void logout()}
