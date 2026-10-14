@@ -4,9 +4,14 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { Spinner } from '@/components/ui'
 import { AppLayout } from '@/layouts/AppLayout'
 import { useAuth } from '@/lib/auth'
+import { ACCESS } from '@/lib/navigation'
 import type { Role } from '@/lib/roles'
 import { currentHospital } from '@/lib/tenant'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { AppointmentsPage } from '@/pages/frontdesk/AppointmentsPage'
+import { PatientDetailPage } from '@/pages/frontdesk/PatientDetailPage'
+import { PatientsPage } from '@/pages/frontdesk/PatientsPage'
+import { QueuePage } from '@/pages/frontdesk/QueuePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NoHospitalPage, NotFoundPage } from '@/pages/StatusPages'
 
@@ -39,6 +44,38 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route
+          path="queue"
+          element={
+            <RequireRole roles={ACCESS.queue}>
+              <QueuePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="appointments"
+          element={
+            <RequireRole roles={ACCESS.appointments}>
+              <AppointmentsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="patients"
+          element={
+            <RequireRole roles={ACCESS.patients}>
+              <PatientsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="patients/:id"
+          element={
+            <RequireRole roles={ACCESS.patients}>
+              <PatientDetailPage />
+            </RequireRole>
+          }
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

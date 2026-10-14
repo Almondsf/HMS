@@ -148,12 +148,13 @@ class StaffSerializer(serializers.ModelSerializer):
     role = serializers.CharField(source='user_type', read_only=True)
     department = serializers.SerializerMethodField()
     specialty = serializers.SerializerMethodField()
+    doctor_id = serializers.SerializerMethodField(help_text='Doctor profile id, for assigning visits and appointments')
 
     class Meta:
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'full_name', 'role', 'phone_number',
-            'department', 'specialty', 'is_active', 'date_joined',
+            'department', 'specialty', 'doctor_id', 'is_active', 'date_joined',
         ]  # fmt: skip
         read_only_fields = fields
 
@@ -168,6 +169,10 @@ class StaffSerializer(serializers.ModelSerializer):
         profile = self._profile(user)
         department = getattr(profile, 'department', None)
         return {'id': department.id, 'name': department.name} if department else None
+
+    def get_doctor_id(self, user):
+        doctor = getattr(user, 'doctorprofile', None)
+        return doctor.pk if doctor else None
 
     def get_specialty(self, user):
         doctor = getattr(user, 'doctorprofile', None)
