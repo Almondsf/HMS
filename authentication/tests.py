@@ -5,13 +5,12 @@ import sys
 from django.conf import settings
 from django.test import SimpleTestCase
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from authentication.models import User
-from helpers.testing import TEST_PASSWORD, make_user
+from helpers.testing import TEST_PASSWORD, TenantAPITestCase, make_user
 
 
-class LoginTests(APITestCase):
+class LoginTests(TenantAPITestCase):
     def setUp(self):
         self.user = make_user(User.UserType.DOCTOR)
 
@@ -40,7 +39,7 @@ class LoginTests(APITestCase):
         self.assertEqual(self.user.failed_login_attempts, 0)
 
 
-class SessionTests(APITestCase):
+class SessionTests(TenantAPITestCase):
     def setUp(self):
         self.user = make_user(User.UserType.RECEPTIONIST)
         tokens = self.client.post('/api/auth/login/', {'email': self.user.email, 'password': TEST_PASSWORD}).data
@@ -82,13 +81,6 @@ class SessionTests(APITestCase):
         self.assertEqual(self.user.first_name, 'Ada')
 
 
-class HealthCheckTests(APITestCase):
-    def test_health_is_public(self):
-        response = self.client.get('/api/health/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['database'], 'up')
-
-
 class ProductionSettingsTests(SimpleTestCase):
     '''Production must refuse to boot with insecure configuration.'''
 
@@ -119,7 +111,7 @@ class ProductionSettingsTests(SimpleTestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
-class ApiDocsTests(APITestCase):
+class ApiDocsTests(TenantAPITestCase):
     def test_schema_is_served(self):
         response = self.client.get('/api/schema.json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)

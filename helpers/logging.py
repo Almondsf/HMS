@@ -4,17 +4,20 @@ import json
 import logging
 from datetime import UTC, datetime
 
+from django.db import connection
+
 # Attributes every LogRecord has; anything else was passed via `extra=`
-_STANDARD_ATTRS = set(vars(logging.makeLogRecord({}))) | {'message', 'asctime', 'request_id'}
+_STANDARD_ATTRS = set(vars(logging.makeLogRecord({}))) | {'message', 'asctime', 'request_id', 'tenant'}
 
 
 class RequestIdFilter(logging.Filter):
-    '''Stamp each record with the current request id (blank outside requests).'''
+    '''Stamp each record with the request id and the hospital (schema) it ran for.'''
 
     def filter(self, record):
         from audit.context import current_request_id
 
         record.request_id = current_request_id()
+        record.tenant = getattr(connection, 'schema_name', '')
         return True
 
 
@@ -26,6 +29,7 @@ class JsonFormatter(logging.Formatter):
             'logger': record.name,
             'message': record.getMessage(),
             'request_id': getattr(record, 'request_id', ''),
+            'tenant': getattr(record, 'tenant', ''),
         }
         entry.update({k: v for k, v in vars(record).items() if k not in _STANDARD_ATTRS})
         if record.exc_info:

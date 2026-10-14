@@ -7,17 +7,21 @@ from decouple import config
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401,F403
-from .base import ALLOWED_HOSTS, SECRET_KEY
+from .base import ALLOWED_HOSTS, PLATFORM_DOMAINS, SECRET_KEY, TENANT_BASE_DOMAIN
 
 DEBUG = False
 
 if not SECRET_KEY or SECRET_KEY.startswith('django-insecure'):
     raise ImproperlyConfigured('SECRET_KEY must be set to a strong random value in production.')
 
-# Render injects the service hostname; other hosts come from ALLOWED_HOSTS
+# Hosts: the platform's own domains, every hospital subdomain, Render's
+# service hostname, plus anything extra in ALLOWED_HOSTS
 RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME', default='')
 if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS = [*ALLOWED_HOSTS, RENDER_EXTERNAL_HOSTNAME]
+    PLATFORM_DOMAINS = [*PLATFORM_DOMAINS, RENDER_EXTERNAL_HOSTNAME]
+ALLOWED_HOSTS = [*ALLOWED_HOSTS, *PLATFORM_DOMAINS]
+if TENANT_BASE_DOMAIN != 'localhost':
+    ALLOWED_HOSTS.append(f'.{TENANT_BASE_DOMAIN}')
 if not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS:
     raise ImproperlyConfigured('ALLOWED_HOSTS must list the real hostnames (no "*") in production.')
 
@@ -27,7 +31,6 @@ AUDIT_TRUST_X_FORWARDED_FOR = config('AUDIT_TRUST_X_FORWARDED_FOR', default=True
 # HTTPS everywhere (TLS terminates at the platform's proxy)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
-SECURE_REDIRECT_EXEMPT = [r'^api/health/$']
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 

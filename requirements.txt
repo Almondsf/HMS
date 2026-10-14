@@ -6,6 +6,7 @@ Django==5.2.18
 django-cors-headers==4.9.0
 djangorestframework_simplejwt==5.5.1
 djangorestframework==3.17.2
+django-tenants==4.0.0
 dj-database-url==3.0.1
 drf-yasg==1.21.11
 gunicorn==23.0.0

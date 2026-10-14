@@ -1,13 +1,12 @@
 from django.db import DatabaseError, transaction
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from audit import events
 from audit.models import AuditEvent
 from audit.recorder import Category, record
 from authentication.models import User
 from clinical.models import Prescription, Visit
-from helpers.testing import TEST_PASSWORD, make_consultation, make_user
+from helpers.testing import TEST_PASSWORD, TenantAPITestCase, make_consultation, make_user
 from lab.models import LabTest
 from lab.services import place_order
 from pharmacy.models import Drug
@@ -15,7 +14,7 @@ from pharmacy.models import Drug
 Role = User.UserType
 
 
-class ChangeTrackingTests(APITestCase):
+class ChangeTrackingTests(TenantAPITestCase):
     def setUp(self):
         self.receptionist = make_user(Role.RECEPTIONIST)
         self.doctor = make_user(Role.DOCTOR)
@@ -75,7 +74,7 @@ class ChangeTrackingTests(APITestCase):
         self.assertNotIn('Sup3r-secret-pw', str(event.changes))
 
 
-class AccessLoggingTests(APITestCase):
+class AccessLoggingTests(TenantAPITestCase):
     def setUp(self):
         self.doctor = make_user(Role.DOCTOR)
         self.consultation = make_consultation(doctor=self.doctor)
@@ -110,7 +109,7 @@ class AccessLoggingTests(APITestCase):
         self.assertEqual(self.client.get('/api/audit/events/').status_code, status.HTTP_403_FORBIDDEN)
 
 
-class SecurityEventTests(APITestCase):
+class SecurityEventTests(TenantAPITestCase):
     def setUp(self):
         self.user = make_user(Role.NURSE)
 
@@ -147,7 +146,7 @@ class SecurityEventTests(APITestCase):
         self.assertEqual((event.actor_id, event.metadata['path']), (self.user.id, '/api/pharmacy/drugs/'))
 
 
-class DomainEventTests(APITestCase):
+class DomainEventTests(TenantAPITestCase):
     def setUp(self):
         self.received = []
 
@@ -212,7 +211,7 @@ class DomainEventTests(APITestCase):
         self.assertEqual(dispensed.patient_id, prescription.consultation.visit.patient_id)
 
 
-class AppendOnlyTests(APITestCase):
+class AppendOnlyTests(TenantAPITestCase):
     def test_events_cannot_be_changed_or_deleted(self):
         event = record('test', Category.SECURITY)
 

@@ -3,14 +3,15 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from audit.recorder import Category, record
 
 from . import services
 from .serializers import ChangePasswordSerializer, LoginSerializer, LogoutSerializer, UserSerializer
+from .tokens import TenantTokenRefreshSerializer, check_token_tenant
 
 
 class LoginView(TokenObtainPairView):
@@ -18,6 +19,10 @@ class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
+
+
+class TenantTokenRefreshView(TokenRefreshView):
+    serializer_class = TenantTokenRefreshSerializer
 
 
 class LogoutView(APIView):
@@ -31,10 +36,11 @@ class LogoutView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             token = RefreshToken(serializer.validated_data['refresh'])
+            check_token_tenant(token)
             if str(token.get('user_id')) != str(request.user.id):
                 raise TokenError('Token does not belong to this user')
             token.blacklist()
-        except TokenError:
+        except (TokenError, InvalidToken):
             record('logout_failed', Category.SECURITY)
             return Response({'detail': 'Invalid or expired refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
         record('logout', Category.SECURITY)

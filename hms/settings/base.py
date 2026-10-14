@@ -21,27 +21,58 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
 
 # Application definition
 
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
+# Multi-tenancy: one Postgres schema per hospital (django-tenants).
+# SHARED_APPS live in the public schema (the platform); TENANT_APPS are
+# created inside every hospital's schema. Apps in both exist in each.
+
+SHARED_APPS = [
+    'django_tenants',
+    'tenants',
     'django.contrib.contenttypes',
+    'django.contrib.auth',
+    'django.contrib.admin',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
     'drf_yasg',
+    # Platform operators and platform-level audit trail
     'authentication',
+    'rest_framework_simplejwt.token_blacklist',
+    'audit',
+]
+
+TENANT_APPS = [
+    'django.contrib.contenttypes',
+    'django.contrib.auth',
+    'django.contrib.admin',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'authentication',
+    'rest_framework_simplejwt.token_blacklist',
+    'audit',
     'profiles',
     'clinical',
     'lab',
     'pharmacy',
-    'audit',
 ]
 
+INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]
+
+TENANT_MODEL = 'tenants.Hospital'
+TENANT_DOMAIN_MODEL = 'tenants.Domain'
+DATABASE_ROUTERS = ['django_tenants.routers.TenantSyncRouter']
+
+# Hospitals get <subdomain>.<TENANT_BASE_DOMAIN>, e.g. stlukes.hms.app
+TENANT_BASE_DOMAIN = config('TENANT_BASE_DOMAIN', default='localhost')
+# Hostnames serving the platform itself (public schema); see setup_platform
+PLATFORM_DOMAINS = config('PLATFORM_DOMAINS', default='', cast=Csv())
+
 MIDDLEWARE = [
+    'tenants.middleware.HealthCheckMiddleware',
+    'tenants.middleware.HospitalMiddleware',  # selects the hospital schema; must precede anything using the DB
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'audit.context.AuditContextMiddleware',
@@ -54,7 +85,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'hms.urls'
+ROOT_URLCONF = 'hms.urls'  # hospital sites
+PUBLIC_SCHEMA_URLCONF = 'hms.urls_public'  # platform site
 
 TEMPLATES = [
     {
@@ -79,11 +111,15 @@ WSGI_APPLICATION = 'hms.wsgi.application'
 DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
-    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, conn_health_checks=True)}
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL, engine='django_tenants.postgresql_backend', conn_max_age=600, conn_health_checks=True
+        )
+    }
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            'ENGINE': 'django_tenants.postgresql_backend',
             'NAME': config('DB_NAME', default='hms'),
             'USER': config('DB_USER', default='postgres'),
             'PASSWORD': config('DB_PASSWORD', default=''),
@@ -100,7 +136,8 @@ AUTH_USER_MODEL = 'authentication.User'
 # API
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
+    # Tokens are bound to the hospital that issued them (see authentication/tokens.py)
+    'DEFAULT_AUTHENTICATION_CLASSES': ('authentication.tokens.TenantJWTAuthentication',),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
@@ -169,6 +206,8 @@ ADMIN_URL = config('ADMIN_URL', default='admin/')
 # CORS: browser frontends allowed to call the API
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
+# e.g. ^https://[a-z0-9-]+\.hms\.app$ to allow every hospital's frontend
+CORS_ALLOWED_ORIGIN_REGEXES = config('CORS_ALLOWED_ORIGIN_REGEXES', default='', cast=Csv())
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 
@@ -178,6 +217,17 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 SESSION_COOKIE_HTTPONLY = True
+
+
+# Cache keys are prefixed with the hospital schema, so throttling and any
+# cached data never leak between hospitals
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'KEY_FUNCTION': 'django_tenants.cache.make_key',
+        'REVERSE_KEY_FUNCTION': 'django_tenants.cache.reverse_key',
+    }
+}
 
 
 # Audit & logging
@@ -197,7 +247,7 @@ LOGGING = {
     },
     'formatters': {
         'json': {'()': 'helpers.logging.JsonFormatter'},
-        'text': {'format': '%(asctime)s %(levelname)s [%(name)s] [%(request_id)s] %(message)s'},
+        'text': {'format': '%(asctime)s %(levelname)s [%(name)s] [%(tenant)s] [%(request_id)s] %(message)s'},
     },
     'handlers': {
         'console': {
@@ -208,6 +258,8 @@ LOGGING = {
     },
     'root': {'handlers': ['console'], 'level': LOG_LEVEL},
     'loggers': {
+        # Replace Django's own console handler so lines aren't printed twice
+        'django': {'handlers': ['console'], 'level': LOG_LEVEL, 'propagate': False},
         'django.db.backends': {'level': 'WARNING'},
     },
 }

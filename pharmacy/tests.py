@@ -1,15 +1,14 @@
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from authentication.models import User
 from clinical.models import Prescription
-from helpers.testing import make_consultation, make_user
+from helpers.testing import TenantAPITestCase, make_consultation, make_user
 from pharmacy.models import DispenseTransaction, Drug
 
 Role = User.UserType
 
 
-class DepartmentAccessTests(APITestCase):
+class DepartmentAccessTests(TenantAPITestCase):
     '''Role rules for the pharmacy and lab endpoints.'''
 
     def status_for(self, role, method, url, data=None):
@@ -44,7 +43,7 @@ class DepartmentAccessTests(APITestCase):
         )
 
 
-class DispenseTests(APITestCase):
+class DispenseTests(TenantAPITestCase):
     def setUp(self):
         self.pharmacist = make_user(Role.PHARMACIST)
         self.drug = Drug.objects.create(name='Amoxicillin', unit='capsule', quantity_in_stock=30, reorder_level=10)

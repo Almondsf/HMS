@@ -5,6 +5,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from . import services
+from .tokens import add_tenant_claim
 
 User = get_user_model()
 
@@ -89,7 +90,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         token['user_type'] = user.user_type
         token['full_name'] = user.get_full_name()
 
-        return token
+        return add_tenant_claim(token)
 
     def validate(self, attrs):
         email = attrs.get(self.username_field, '')

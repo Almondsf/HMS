@@ -1,6 +1,6 @@
 # HMS: Hospital Management System API
 
-A Django REST backend for running a clinic or hospital: patient registration, visits, consultations (SOAP notes), prescriptions, laboratory and pharmacy, with role-based access and a full audit trail.
+A multi-hospital Django REST backend for running clinics and hospitals: patient registration, visits, consultations (SOAP notes), prescriptions, laboratory and pharmacy, with role-based access and a full audit trail. One deployment serves many hospitals, and each hospital's data lives in its own isolated database schema.
 
 ## Modules
 
@@ -12,6 +12,7 @@ A Django REST backend for running a clinic or hospital: patient registration, vi
 | `lab` | Test catalogue, orders (from consultations or walk-in), results |
 | `pharmacy` | Drug stock, dispensing against prescriptions |
 | `audit` | Append-only audit trail, security events, domain events |
+| `tenants` | Hospitals, their addresses, provisioning, the platform site |
 
 ## Quick start
 
@@ -19,7 +20,7 @@ A Django REST backend for running a clinic or hospital: patient registration, vi
 
 ```bash
 docker compose up
-docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py create_hospital --name "Demo Hospital" --schema demo --admin-email you@example.com
 ```
 
 **Without Docker** (needs Python 3.12 and a running PostgreSQL):
@@ -30,17 +31,48 @@ venv\Scripts\activate            # Windows   (macOS/Linux: source venv/bin/activ
 pip install -r requirements-dev.txt
 cp .env.example .env             # then set your DB_* values
 python manage.py migrate
-python manage.py createsuperuser
+python manage.py setup_platform
+python manage.py create_hospital --name "Demo Hospital" --schema demo --admin-email you@example.com
 python manage.py runserver
 ```
 
-API docs: http://localhost:8000/api/docs/. Admin: http://localhost:8000/admin/.
+`create_hospital` prints a one-time password for the hospital's admin. The hospital is then live at **http://demo.localhost:8000**: API docs at `/api/docs/`, admin at `/admin/`. Browsers and curl resolve `*.localhost` to your machine.
 
-The first superuser is the hospital admin. Staff accounts are then created by an admin through `/api/create-profile/<role>/`, and patients by an admin or receptionist.
+The hospital admin creates staff through `/api/create-profile/<role>/`. Patients are registered by an admin or receptionist.
+
+## Multi-tenancy
+
+Each hospital is a **tenant** with its own Postgres schema ([django-tenants](https://django-tenants.readthedocs.io/)). Requests are routed by hostname:
+
+| Address | Serves |
+|---|---|
+| `<hospital>.<TENANT_BASE_DOMAIN>` | That hospital's API, admin and docs ([hms/urls.py](hms/urls.py)) |
+| `PLATFORM_DOMAINS` | The platform: operator login and the admin for hospitals ([hms/urls_public.py](hms/urls_public.py)) |
+| anything else | `404`, except `/api/health/`, which answers on any host |
+
+- **Isolation:** users, patients and all records live in the hospital's schema. One hospital's queries cannot reach another's tables.
+- **Tokens are bound to their hospital:** each JWT carries a `tenant` claim and is rejected at any other hospital or at the platform. Without this, user #5's token from one hospital would authenticate as a different user #5 elsewhere ([authentication/tokens.py](authentication/tokens.py)).
+- **Suspension:** setting a hospital's `is_active` to false blocks all access to it (403) without touching its data.
+- **Adding apps:** shared (platform) apps go in `SHARED_APPS`, per-hospital apps in `TENANT_APPS` ([hms/settings/base.py](hms/settings/base.py)). `migrate` migrates every schema.
+- **Code outside a request** (commands, jobs) must pick a hospital first:
+  ```python
+  from django_tenants.utils import tenant_context
+
+  with tenant_context(hospital):
+      ...
+  ```
+
+**Management commands**
+
+| Command | Purpose |
+|---|---|
+| `setup_platform [domain ...]` | Register the platform site and its domains. Idempotent; run on every deploy |
+| `create_hospital --name --schema --admin-email [--domain --plan]` | Provision a hospital: schema, address and first admin |
+| `adopt_legacy_data --schema <hospital> [--force]` | One-time upgrade: copy a pre-multi-tenancy database (data in `public`) into a hospital |
 
 ## Roles and access
 
-Enforced on every endpoint with `authentication.permissions.allow_roles`. Superusers can do everything.
+Within a hospital, access is enforced on every endpoint with `authentication.permissions.allow_roles`. Superusers can do everything in their own hospital.
 
 | Resource | Read | Write |
 |---|---|---|
@@ -128,13 +160,31 @@ Optional local hooks: `pip install pre-commit && pre-commit install`.
 
 ## Deploying (Render)
 
-1. Set these environment variables:
-   - `DATABASE_URL`
-   - `SECRET_KEY`
-   - `CORS_ALLOWED_ORIGINS`: your frontend's URL
-   - optionally `ALLOWED_HOSTS` for custom domains
-2. **Build command:** `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate`
-3. **Start command:** `gunicorn hms.wsgi --access-logfile -`
-4. Point the health check at `/api/health/`.
+1. **Domains:**
+   - Choose a base domain for hospitals, e.g. `hms.app`.
+   - Add a wildcard custom domain (`*.hms.app`) to the Render service.
+   - Point a wildcard DNS record at Render.
+2. **Environment variables:**
+   - `DATABASE_URL` and `SECRET_KEY`
+   - `TENANT_BASE_DOMAIN=hms.app`
+   - `PLATFORM_DOMAINS`: e.g. `hms.app`. Render's own hostname is added automatically.
+   - `CORS_ALLOWED_ORIGINS` or `CORS_ALLOWED_ORIGIN_REGEXES` for your frontends
+3. **Build command:** `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py setup_platform`
+4. **Start command:** `gunicorn hms.wsgi --access-logfile -`
+5. **Health check path:** `/api/health/`
+6. **Create hospitals** from the Render shell: `python manage.py create_hospital ...`
 
 On Render, `manage.py` automatically uses production settings. Elsewhere, set `DJANGO_SETTINGS_MODULE=hms.settings.prod`. A production [Dockerfile](Dockerfile) is also provided: it runs as a non-root user and includes a health check.
+
+### Upgrading a single-hospital deployment
+
+Before multi-tenancy, all data lived in the `public` schema. To move it into a hospital:
+
+1. Back up the database.
+2. Deploy. The build command migrates the shared schema and registers the platform.
+3. In the Render shell, create the hospital:
+   `python manage.py create_hospital --name "..." --schema main --admin-email ...`
+4. Then copy the data:
+   `python manage.py adopt_legacy_data --schema main --force`
+
+`--force` is needed because the new hospital already contains its setup admin. The copy replaces it with your existing users, who keep their passwords. The source tables in `public` are left untouched and can be dropped once you've verified the hospital.

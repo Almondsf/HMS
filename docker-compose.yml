@@ -1,4 +1,5 @@
-# Local development: `docker compose up` then open http://localhost:8000/api/docs/
+# Local development: `docker compose up`, create a hospital (see README), then
+# open http://<hospital>.localhost:8000/api/docs/
 services:
   db:
     image: postgres:16
@@ -18,7 +19,7 @@ services:
 
   web:
     build: .
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py setup_platform && python manage.py runserver 0.0.0.0:8000"
     environment:
       DJANGO_SETTINGS_MODULE: hms.settings.dev
       DATABASE_URL: postgres://hms:hms@db:5432/hms

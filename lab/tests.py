@@ -2,16 +2,16 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from authentication.models import User
-from helpers.testing import make_consultation, make_user
+from helpers.testing import TenantAPITestCase, make_consultation, make_user
 from lab.models import LabTest, TestOrder, TestResult
+from tenants.models import Hospital
 
 Role = User.UserType
 
 
-class LabWorkflowTests(APITestCase):
+class LabWorkflowTests(TenantAPITestCase):
     def setUp(self):
         self.doctor = make_user(Role.DOCTOR)
         self.labtech = make_user(Role.LAB_TECHNICIAN)
@@ -94,14 +94,21 @@ class LegacyLabOrderMigrationTests(TransactionTestCase):
     before = [('lab', '0003_lab_workflow'), ('clinical', '0002_rename_laborder_labtestorder'), users]
     after = [('lab', '0004_copy_lab_data'), users]
 
+    def setUp(self):
+        # A throwaway hospital schema to roll migrations back and forth in
+        self.hospital = Hospital(schema_name='migration_test', name='Migration test')
+        self.hospital.save(verbosity=0)
+        connection.set_tenant(self.hospital)
+
+    def tearDown(self):
+        connection.set_schema_to_public()
+        self.hospital.delete(force_drop=True)
+
     def migrate(self, targets):
         executor = MigrationExecutor(connection)
         executor.loader.build_graph()
         executor.migrate(targets)
         return executor.loader.project_state(targets).apps
-
-    def tearDown(self):
-        self.migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
 
     def test_legacy_orders_are_copied(self):
         apps = self.migrate(self.before)

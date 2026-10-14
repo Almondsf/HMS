@@ -1,8 +1,7 @@
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from authentication.models import User
-from helpers.testing import make_user
+from helpers.testing import TenantAPITestCase, make_user
 from profiles.models import ReceptionistProfile
 
 
@@ -18,7 +17,7 @@ def user_payload(**overrides):
     }
 
 
-class ProfileRegistrationAccessTests(APITestCase):
+class ProfileRegistrationAccessTests(TenantAPITestCase):
     def test_anonymous_cannot_register_anyone(self):
         response = self.client.post('/api/create-profile/patients/', user_payload(), format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

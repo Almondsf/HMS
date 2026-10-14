@@ -1,16 +1,15 @@
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from authentication.models import User
 from clinical.models import Consultation, Prescription, Visit
-from helpers.testing import make_user
+from helpers.testing import TenantAPITestCase, make_user
 from lab.models import LabTest
 from pharmacy.models import Drug
 
 Role = User.UserType
 
 
-class ClinicalAccessTests(APITestCase):
+class ClinicalAccessTests(TenantAPITestCase):
     def setUp(self):
         self.doctor = make_user(Role.DOCTOR)
         self.other_doctor = make_user(Role.DOCTOR)
@@ -82,7 +81,7 @@ class ClinicalAccessTests(APITestCase):
         self.assertEqual(self.my_consultation.visit, self.my_visit)
 
 
-class ConsultationWorkflowTests(APITestCase):
+class ConsultationWorkflowTests(TenantAPITestCase):
     def setUp(self):
         self.doctor = make_user(Role.DOCTOR)
         self.patient = make_user(Role.PATIENT)
