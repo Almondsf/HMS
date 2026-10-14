@@ -11,4 +11,5 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     # Platform operators sign in here (tokens are only valid on the platform site)
     path('api/auth/', include('authentication.urls')),
+    path('api/platform/', include('tenants.urls')),
 ]

@@ -5,6 +5,7 @@ from django.db import transaction
 
 from audit import events
 from lab import services as lab_services
+from tenants.features import Feature, has_feature
 
 from .models import Consultation, Prescription, Visit
 
@@ -19,6 +20,8 @@ def record_consultation(*, doctor_user, visit, prescriptions=(), lab_tests=(), l
         raise PermissionDenied('You can only record consultations for your assigned visits.')
     if visit.status == Visit.Status.CANCELLED:
         raise ValidationError({'visit': 'This visit was cancelled.'})
+    if lab_tests and not has_feature(Feature.LAB):
+        raise ValidationError({'lab_tests': "Your hospital's plan doesn't include the Laboratory module."})
 
     consultation = Consultation.objects.create(visit=visit, **notes)
 

@@ -11,6 +11,7 @@ from audit.models import AuditEvent
 from authentication.models import User
 from clinical.models import Visit
 from helpers.testing import TEST_PASSWORD, SchemaRestoringAPIClient, TenantAPITestCase, make_consultation, make_user
+from lab.models import LabTest
 from tenants.models import Domain, Hospital
 from tenants.services import copy_hospital_data, provision_hospital
 
@@ -179,3 +180,107 @@ class CopyHospitalDataTests(TenantAPITestCase):
             # Id sequences continue after the copied rows
             newer = make_consultation()
             self.assertGreater(newer.visit_id, visit.id)
+
+
+class PlatformHospitalApiTests(PlatformSiteTests):
+    def test_operator_provisions_a_hospital(self):
+        self.platform.force_authenticate(self.operator)
+        response = self.platform.post('/api/platform/hospitals/', {
+            'name': 'Mercy Clinic', 'schema_name': 'mercy', 'plan': 'pro',
+            'admin_email': 'admin@mercy.example', 'admin_first_name': 'Mary', 'admin_last_name': 'Admin',
+        })  # fmt: skip
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data['domains'], ['mercy.localhost'])
+        self.assertEqual(response.data['features'], ['clinical', 'lab', 'pharmacy'])
+        password = response.data['admin']['temporary_password']
+
+        login = client_for('mercy.localhost').post(
+            '/api/auth/login/', {'email': 'admin@mercy.example', 'password': password}
+        )
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+
+    def test_operator_suspends_a_hospital(self):
+        self.platform.force_authenticate(self.operator)
+        response = self.platform.patch(f'/api/platform/hospitals/{self.tenant.pk}/', {'is_active': False})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get('/api/visits/').status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_excludes_the_platform_itself(self):
+        self.platform.force_authenticate(self.operator)
+        schemas = [h['schema_name'] for h in self.platform.get('/api/platform/hospitals/').data['results']]
+        self.assertIn(self.tenant.schema_name, schemas)
+        self.assertNotIn('public', schemas)
+
+    def test_only_platform_superusers_manage_hospitals(self):
+        with schema_context('public'):
+            staff = make_user(Role.ADMIN)  # a platform account without superuser rights
+        self.platform.force_authenticate(staff)
+        self.assertEqual(self.platform.get('/api/platform/hospitals/').status_code, status.HTTP_403_FORBIDDEN)
+
+        # Hospital admins don't even see the platform API on their own site
+        self.client.force_authenticate(make_user(Role.ADMIN))
+        self.assertEqual(self.client.get('/api/platform/hospitals/').status_code, status.HTTP_404_NOT_FOUND)
+
+
+class HospitalSettingsTests(TenantAPITestCase):
+    def test_staff_read_and_admins_edit_settings(self):
+        self.client.force_authenticate(make_user(Role.DOCTOR))
+        response = self.client.get('/api/hospital/')
+        self.assertEqual(response.data['name'], 'Test Hospital')
+        self.assertEqual(response.data['domain'], 'test-hospital.localhost')
+        self.assertEqual(self.client.patch('/api/hospital/', {'phone': '0800'}).status_code, 403)
+
+        self.client.force_authenticate(make_user(Role.ADMIN))
+        response = self.client.patch('/api/hospital/', {'phone': '+2348000000000', 'mrn_prefix': 'SLH'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['mrn_prefix'], 'SLH')
+        self.assertTrue(AuditEvent.objects.filter(resource_type='tenants.hospital', action='update').exists())
+
+    def test_admins_cannot_change_their_own_plan(self):
+        self.client.force_authenticate(make_user(Role.ADMIN))
+        self.client.patch('/api/hospital/', {'plan': 'enterprise', 'name': 'Renamed'})
+        with schema_context('public'):
+            hospital = Hospital.objects.get(pk=self.tenant.pk)
+        self.assertEqual((hospital.plan, hospital.name), ('enterprise', 'Renamed'))  # test hospital is enterprise
+
+        Hospital.objects.filter(pk=self.tenant.pk).update(plan='basic')
+        self.client.patch('/api/hospital/', {'plan': 'enterprise'})
+        self.assertEqual(Hospital.objects.get(pk=self.tenant.pk).plan, 'basic')
+
+    def test_invalid_settings_are_rejected(self):
+        self.client.force_authenticate(make_user(Role.ADMIN))
+        for field, value in [('timezone', 'Mars/Olympus'), ('currency', 'naira'), ('mrn_prefix', 'bad prefix')]:
+            with self.subTest(field=field):
+                self.assertEqual(self.client.patch('/api/hospital/', {field: value}).status_code, 400)
+
+    def test_times_are_shown_in_the_hospitals_timezone(self):
+        Hospital.objects.filter(pk=self.tenant.pk).update(timezone='Africa/Nairobi')
+        consultation = make_consultation()
+        self.client.force_authenticate(consultation.visit.assigned_doctor.user)
+        visit = self.client.get(f'/api/visits/{consultation.visit_id}/').data
+        self.assertTrue(visit['visit_date'].endswith('+03:00'), visit['visit_date'])
+
+
+class PlanFeatureTests(TenantAPITestCase):
+    def setUp(self):
+        Hospital.objects.filter(pk=self.tenant.pk).update(plan=Hospital.Plan.BASIC)
+
+    def test_basic_plan_has_no_lab(self):
+        self.client.force_authenticate(make_user(Role.LAB_TECHNICIAN))
+        response = self.client.get('/api/lab/tests/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn('Laboratory', str(response.data['detail']))
+
+        self.client.force_authenticate(make_user(Role.PHARMACIST))
+        self.assertEqual(self.client.get('/api/pharmacy/drugs/').status_code, status.HTTP_200_OK)
+
+    def test_consultation_cannot_order_lab_tests_without_lab(self):
+        consultation = make_consultation()
+        test = LabTest.objects.create(name='FBC', cost=100)
+        self.client.force_authenticate(consultation.visit.assigned_doctor.user)
+        response = self.client.post(
+            '/api/consultations/', {'visit': consultation.visit_id, 'lab_tests': [test.id]}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('lab_tests', response.data)

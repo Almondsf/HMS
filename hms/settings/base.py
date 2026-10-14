@@ -73,6 +73,7 @@ PLATFORM_DOMAINS = config('PLATFORM_DOMAINS', default='', cast=Csv())
 MIDDLEWARE = [
     'tenants.middleware.HealthCheckMiddleware',
     'tenants.middleware.HospitalMiddleware',  # selects the hospital schema; must precede anything using the DB
+    'tenants.middleware.HospitalTimezoneMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'audit.context.AuditContextMiddleware',

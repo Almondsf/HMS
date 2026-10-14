@@ -94,6 +94,7 @@ class TenantAPITestCase(FastTenantTestCase):
     @classmethod
     def setup_tenant(cls, tenant):
         tenant.name = 'Test Hospital'
+        tenant.plan = 'enterprise'  # every module enabled; plan gating has its own tests
 
     @classmethod
     def _fixture_setup(cls):

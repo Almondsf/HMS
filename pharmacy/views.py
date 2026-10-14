@@ -2,6 +2,7 @@ from rest_framework import viewsets
 
 from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
+from tenants.features import Feature, requires_feature
 
 from .models import DispenseTransaction, Drug
 from .serializers import DispenseTransactionSerializer, DrugSerializer
@@ -11,10 +12,11 @@ class DrugViewSet(viewsets.ModelViewSet):
     serializer_class = DrugSerializer
     queryset = Drug.objects.order_by('name')
     permission_classes = [
+        requires_feature(Feature.PHARMACY),
         allow_roles(
             read=[Role.DOCTOR, Role.NURSE],
             write=[Role.PHARMACIST, Role.ADMIN],
-        )
+        ),
     ]
 
 
@@ -27,6 +29,6 @@ class DispenseTransactionViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         .prefetch_related('items__prescription__consultation__visit__patient__user')
         .order_by('-dispensed_at')
     )
-    permission_classes = [allow_roles(read=[Role.ADMIN], write=[Role.PHARMACIST])]
+    permission_classes = [requires_feature(Feature.PHARMACY), allow_roles(read=[Role.ADMIN], write=[Role.PHARMACIST])]
     # Dispensing already moved stock, so records are create-only (no edit/delete)
     http_method_names = ['get', 'post', 'head', 'options']

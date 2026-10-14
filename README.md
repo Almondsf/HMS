@@ -62,6 +62,32 @@ Each hospital is a **tenant** with its own Postgres schema ([django-tenants](htt
       ...
   ```
 
+**Platform API** (on a platform domain, for platform superusers only):
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/platform/hospitals/` | Provision a hospital. Takes `name`, `schema_name`, `plan` and `admin_*` fields; returns the admin's one-time password if none was given |
+| `GET /api/platform/hospitals/` | List hospitals with their domains, plans and status |
+| `PATCH /api/platform/hospitals/<id>/` | Change plan or settings; `is_active: false` suspends the hospital |
+
+**Hospital settings:** `GET/PATCH /api/hospital/` on the hospital's own site. Everyone signed in can read them; admins edit:
+- `name`, `contact_email`, `phone`, `address`
+- `timezone`: API timestamps are shown in it
+- `currency`
+- `mrn_prefix`: prefix for patient record numbers
+
+The response also lists the `features` the hospital's plan includes, so frontends can show only the modules available.
+
+**Plans and modules** ([tenants/features.py](tenants/features.py)):
+
+| Plan | Modules |
+|---|---|
+| Basic | Front desk & consultations, Pharmacy |
+| Pro | + Laboratory |
+| Enterprise | All modules |
+
+Endpoints of a module the plan doesn't include return 403 with an explanation.
+
 **Management commands**
 
 | Command | Purpose |

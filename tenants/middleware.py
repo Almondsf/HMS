@@ -1,5 +1,8 @@
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from django.db import connection
 from django.http import JsonResponse
+from django.utils import timezone
 from django_tenants.middleware.main import TenantMainMiddleware
 from django_tenants.utils import get_public_schema_name
 
@@ -38,3 +41,22 @@ class HospitalMiddleware(TenantMainMiddleware):
         if request.tenant.schema_name != get_public_schema_name() and not request.tenant.is_active:
             return JsonResponse({'detail': "This hospital's account is suspended. Please contact support."}, status=403)
         return None
+
+
+class HospitalTimezoneMiddleware:
+    '''Show times in the hospital's own timezone (API output, admin).'''
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        hospital_timezone = getattr(getattr(request, 'tenant', None), 'timezone', None)
+        if hospital_timezone:
+            try:
+                timezone.activate(ZoneInfo(hospital_timezone))
+            except ZoneInfoNotFoundError:
+                pass  # invalid values are rejected on save; fall back to UTC
+        try:
+            return self.get_response(request)
+        finally:
+            timezone.deactivate()

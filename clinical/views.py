@@ -2,6 +2,7 @@ from rest_framework import viewsets
 
 from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
+from tenants.features import Feature, requires_feature
 
 from . import services
 from .models import Consultation, Prescription, Visit
@@ -15,10 +16,11 @@ CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'la
 
 class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     permission_classes = [
+        requires_feature(Feature.CLINICAL),
         allow_roles(
             read=[Role.DOCTOR, Role.NURSE, Role.PATIENT],
             write=[Role.ADMIN, Role.RECEPTIONIST],
-        )
+        ),
     ]
     http_method_names = CLINICAL_RECORD_METHODS
 
@@ -58,10 +60,11 @@ class ConsultationViewSet(AuditedReadMixin, viewsets.ModelViewSet):
 
     serializer_class = ConsultationSerializer
     permission_classes = [
+        requires_feature(Feature.CLINICAL),
         allow_roles(
             read=[Role.ADMIN, Role.PATIENT],
             write=[Role.DOCTOR],
-        )
+        ),
     ]
     http_method_names = CLINICAL_RECORD_METHODS
 
@@ -90,7 +93,10 @@ class PrescriptionViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
     '''
 
     serializer_class = PrescriptionDetailSerializer
-    permission_classes = [allow_roles(read=[Role.PHARMACIST, Role.DOCTOR, Role.PATIENT, Role.ADMIN])]
+    permission_classes = [
+        requires_feature(Feature.CLINICAL),
+        allow_roles(read=[Role.PHARMACIST, Role.DOCTOR, Role.PATIENT, Role.ADMIN]),
+    ]
 
     def get_queryset(self):
         user = self.request.user

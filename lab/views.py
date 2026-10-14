@@ -3,6 +3,7 @@ from rest_framework import viewsets
 
 from audit.mixins import AuditedReadMixin
 from authentication.permissions import STAFF_ROLES, Role, allow_roles
+from tenants.features import Feature, requires_feature
 
 from .models import LabTest, TestOrder, TestResult
 from .serializers import LabTestSerializer, TestOrderSerializer, TestResultSerializer
@@ -18,13 +19,19 @@ class LabTestViewSet(viewsets.ModelViewSet):
 
     queryset = LabTest.objects.all()
     serializer_class = LabTestSerializer
-    permission_classes = [allow_roles(read=STAFF_ROLES, write=[Role.ADMIN, Role.LAB_TECHNICIAN])]
+    permission_classes = [
+        requires_feature(Feature.LAB),
+        allow_roles(read=STAFF_ROLES, write=[Role.ADMIN, Role.LAB_TECHNICIAN]),
+    ]
     http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
 
 class TestOrderViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     serializer_class = TestOrderSerializer
-    permission_classes = [allow_roles(read=[Role.ADMIN], write=[Role.DOCTOR, Role.LAB_TECHNICIAN])]
+    permission_classes = [
+        requires_feature(Feature.LAB),
+        allow_roles(read=[Role.ADMIN], write=[Role.DOCTOR, Role.LAB_TECHNICIAN]),
+    ]
     http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
@@ -41,7 +48,10 @@ class TestResultViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     '''Results are created with their order; the lab fills them in with PATCH.'''
 
     serializer_class = TestResultSerializer
-    permission_classes = [allow_roles(read=[Role.DOCTOR, Role.ADMIN], write=[Role.LAB_TECHNICIAN])]
+    permission_classes = [
+        requires_feature(Feature.LAB),
+        allow_roles(read=[Role.DOCTOR, Role.ADMIN], write=[Role.LAB_TECHNICIAN]),
+    ]
     http_method_names = ['get', 'patch', 'head', 'options']
 
     def get_queryset(self):

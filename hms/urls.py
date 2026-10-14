@@ -7,6 +7,8 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication
 
+from tenants.views import HospitalSettingsView
+
 # Docs are open in development; in production only staff signed in to the admin can view them
 schema_view = get_schema_view(
     openapi.Info(
@@ -22,6 +24,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path('api/auth/', include('authentication.urls')),
+    path('api/hospital/', HospitalSettingsView.as_view(), name='hospital-settings'),
     path('api/create-profile/', include('profiles.urls')),
     path('api/', include('clinical.urls')),
     path('api/pharmacy/', include('pharmacy.urls')),
