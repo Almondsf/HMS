@@ -45,6 +45,21 @@ python manage.py runserver
 
 The hospital admin creates staff through `/api/v1/create-profile/<role>/`. Patients are registered by an admin or receptionist.
 
+## Frontend
+
+The web app is in [frontend/](frontend/). It uses React 19, TypeScript, Vite, Tailwind CSS (white and sky blue, defined as `brand-*` colours in [src/index.css](frontend/src/index.css)), React Router and TanStack Query.
+
+```bash
+cd frontend
+npm install
+npm run dev        # then open http://<hospital>.localhost:5173, e.g. http://main.localhost:5173
+npm run build      # type-check + production build into dist/
+```
+
+- **Which hospital:** the app works out the hospital from its own address (`main.localhost:5173` means hospital `main`), and talks to that hospital's API at `http://main.localhost:8000` by default. In production, set `VITE_TENANT_BASE_DOMAIN` and `VITE_API_URL` (see [frontend/.env.example](frontend/.env.example)).
+- **Sessions:** access tokens refresh automatically, and simultaneous expiries trigger a single refresh. Signing out revokes the refresh token on the server.
+- **Hosting:** `dist/` is static files, so it can be served from any static host or CDN.
+
 ## Multi-tenancy
 
 Each hospital is a **tenant** with its own Postgres schema ([django-tenants](https://django-tenants.readthedocs.io/)). Requests are routed by hostname:

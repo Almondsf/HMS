@@ -66,3 +66,21 @@ jobs:
       - run: pip install pip-audit==2.10.1
       - name: Known vulnerabilities in dependencies
         run: pip-audit -r requirements.txt
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Known vulnerabilities in dependencies
+        run: npm audit --audit-level=high
