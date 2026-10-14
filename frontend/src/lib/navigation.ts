@@ -17,6 +17,7 @@ export const ACCESS = {
   queue: ['receptionist', 'admin', 'nurse', 'doctor'],
   appointments: ['receptionist', 'admin', 'nurse', 'doctor'],
   patients: ['receptionist', 'admin', 'nurse', 'doctor', 'lab_tech', 'pharmacist'],
+  visits: ['doctor', 'nurse', 'admin'],
 } satisfies Record<string, Role[]>
 
 /** Sidebar entries. Each screen chunk adds its items here. */

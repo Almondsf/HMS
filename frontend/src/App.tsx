@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth'
 import { ACCESS } from '@/lib/navigation'
 import type { Role } from '@/lib/roles'
 import { currentHospital } from '@/lib/tenant'
+import { VisitPage } from '@/pages/clinical/VisitPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { AppointmentsPage } from '@/pages/frontdesk/AppointmentsPage'
 import { PatientDetailPage } from '@/pages/frontdesk/PatientDetailPage'
@@ -73,6 +74,14 @@ export function App() {
           element={
             <RequireRole roles={ACCESS.patients}>
               <PatientDetailPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="visits/:id"
+          element={
+            <RequireRole roles={ACCESS.visits}>
+              <VisitPage />
             </RequireRole>
           }
         />

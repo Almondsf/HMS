@@ -1,6 +1,8 @@
 import { CalendarPlus, DoorOpen, Pencil } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
+
+import { usePatientVisits } from '@/api/clinical'
 
 import { fullName, useOpenVisit, usePatient, useSavePatient } from '@/api/frontDesk'
 import { DoctorSelect, PatientForm } from '@/components/frontDesk'
@@ -8,7 +10,8 @@ import { Modal } from '@/components/Modal'
 import { Badge, Button, Card, ErrorAlert, Input, PageHeader, Spinner } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { useCurrentUser } from '@/lib/auth'
-import { age, formatDate, titleCase } from '@/lib/format'
+import { age, formatDate, formatDateTime, titleCase } from '@/lib/format'
+import { VISIT_STATUS } from '@/lib/labels'
 import { BookAppointmentModal } from '@/pages/frontdesk/BookAppointmentModal'
 
 function Detail({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -58,6 +61,40 @@ function WalkInModal({ patientId, open, onClose }: { patientId: number; open: bo
   )
 }
 
+function VisitHistory({ patientId }: { patientId: number }) {
+  const { data: visits, isLoading } = usePatientVisits(patientId, true)
+  return (
+    <Card className="mt-6">
+      <h2 className="border-b border-slate-200 p-5 font-medium text-slate-900">Visits</h2>
+      {isLoading ? (
+        <Spinner />
+      ) : !visits?.length ? (
+        <p className="p-5 text-sm text-slate-500">No visits yet.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {visits.map((visit) => {
+            const diagnoses = visit.consultations.flatMap((consultation) => consultation.diagnoses)
+            return (
+              <li key={visit.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <Link to={`/visits/${visit.id}`} className="w-40 shrink-0 text-sm font-medium text-brand-700 hover:underline">
+                  {formatDateTime(visit.visit_date)}
+                </Link>
+                <span className="min-w-0 flex-1 text-sm text-slate-700">
+                  {visit.reason_for_visit}
+                  {diagnoses.length > 0 && (
+                    <span className="text-slate-500"> · {diagnoses.map((d) => d.code ?? d.description).join(', ')}</span>
+                  )}
+                </span>
+                <Badge tone={VISIT_STATUS[visit.status].tone}>{VISIT_STATUS[visit.status].label}</Badge>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
 export function PatientDetailPage() {
   const { id } = useParams()
   const user = useCurrentUser()
@@ -68,6 +105,7 @@ export function PatientDetailPage() {
   const [walkIn, setWalkIn] = useState(false)
   const [booking, setBooking] = useState(false)
   const frontDesk = user.user_type === 'receptionist' || user.user_type === 'admin'
+  const clinician = user.user_type === 'doctor' || user.user_type === 'nurse' || user.user_type === 'admin'
 
   if (isLoading) return <Spinner />
   if (!patient) return <ErrorAlert error={error ?? new Error('Patient not found.')} />
@@ -122,6 +160,8 @@ export function PatientDetailPage() {
           </dl>
         </Card>
       </div>
+
+      {clinician && <VisitHistory patientId={patient.id} />}
 
       <Modal open={editing} title="Edit patient" onClose={() => setEditing(false)} wide>
         <PatientForm

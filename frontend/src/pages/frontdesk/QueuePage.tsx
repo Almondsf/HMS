@@ -1,26 +1,29 @@
 import { ListOrdered } from 'lucide-react'
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
 
-import { useCancelVisit, useQueue, type QueueEntry, type TriageLevel } from '@/api/frontDesk'
+import { useVisitTransition } from '@/api/clinical'
+
+import { useCancelVisit, useQueue, type QueueEntry } from '@/api/frontDesk'
+import { TriageModal, VitalsModal } from '@/components/clinical/NursingForms'
 import { DoctorSelect } from '@/components/frontDesk'
 import { Badge, Button, Card, EmptyState, ErrorAlert, PageHeader, Spinner } from '@/components/ui'
 import { useCurrentUser } from '@/lib/auth'
 import { formatTime } from '@/lib/format'
-
-export const TRIAGE: Record<TriageLevel, { label: string; tone: 'red' | 'amber' | 'brand' | 'gray' }> = {
-  emergency: { label: 'Emergency', tone: 'red' },
-  urgent: { label: 'Urgent', tone: 'amber' },
-  standard: { label: 'Standard', tone: 'brand' },
-  non_urgent: { label: 'Non-urgent', tone: 'gray' },
-}
+import { TRIAGE } from '@/lib/labels'
+import type { Role } from '@/lib/roles'
 
 function waited(minutes: number): string {
   if (minutes < 60) return `${minutes} min`
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`
 }
 
-function QueueRow({ entry, canCancel }: { entry: QueueEntry; canCancel: boolean }) {
+function QueueRow({ entry, role }: { entry: QueueEntry; role: Role }) {
   const cancel = useCancelVisit()
+  const navigate = useNavigate()
+  const start = useVisitTransition(entry.id)
+  const [dialog, setDialog] = useState<'triage' | 'vitals' | null>(null)
+  const canCancel = role === 'receptionist' || role === 'admin'
   const triage = entry.triage_level ? TRIAGE[entry.triage_level] : null
   const inRoom = entry.status === 'in_progress'
 
@@ -30,7 +33,13 @@ function QueueRow({ entry, canCancel }: { entry: QueueEntry; canCancel: boolean 
         {entry.position ?? '•'}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-slate-900">{entry.patient.name}</p>
+        {role === 'doctor' || role === 'nurse' ? (
+          <Link to={`/visits/${entry.id}`} className="font-medium text-brand-700 hover:underline">
+            {entry.patient.name}
+          </Link>
+        ) : (
+          <p className="font-medium text-slate-900">{entry.patient.name}</p>
+        )}
         <p className="text-xs text-slate-500">
           {entry.patient.mrn} · Dr {entry.doctor.name} · {entry.reason_for_visit}
           {entry.appointment_time ? ` · booked ${formatTime(entry.appointment_time)}` : ' · walk-in'}
@@ -52,6 +61,32 @@ function QueueRow({ entry, canCancel }: { entry: QueueEntry; canCancel: boolean 
           Left
         </Button>
       )}
+      {role === 'nurse' && (
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setDialog('triage')}>
+            Triage
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setDialog('vitals')}>
+            Vitals
+          </Button>
+        </div>
+      )}
+      {role === 'doctor' &&
+        (inRoom ? (
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/visits/${entry.id}`)}>
+            Open
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            loading={start.isPending}
+            onClick={() => start.mutate('start', { onSuccess: () => navigate(`/visits/${entry.id}`) })}
+          >
+            Call in
+          </Button>
+        ))}
+      {dialog === 'triage' && <TriageModal visitId={entry.id} patientName={entry.patient.name} onClose={() => setDialog(null)} />}
+      {dialog === 'vitals' && <VitalsModal visitId={entry.id} patientName={entry.patient.name} onClose={() => setDialog(null)} />}
     </li>
   )
 }
@@ -60,7 +95,6 @@ export function QueuePage() {
   const user = useCurrentUser()
   const [doctor, setDoctor] = useState<number | ''>('')
   const { data: queue, isLoading, error, dataUpdatedAt } = useQueue(doctor)
-  const frontDesk = user.user_type === 'receptionist' || user.user_type === 'admin'
 
   return (
     <>
@@ -82,7 +116,7 @@ export function QueuePage() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {queue.map((entry) => (
-              <QueueRow key={entry.id} entry={entry} canCancel={frontDesk} />
+              <QueueRow key={entry.id} entry={entry} role={user.user_type} />
             ))}
           </ul>
         )}
