@@ -58,7 +58,14 @@ def open_visit(*, patient, assigned_doctor, reason_for_visit):
 
 def _set_status(visit, status, event):
     visit.status = status
-    visit.save(update_fields=['status', 'updated_at'])
+    fields = ['status', 'updated_at']
+    if status == Visit.Status.IN_PROGRESS and visit.started_at is None:
+        visit.started_at = timezone.now()
+        fields.append('started_at')
+    elif status == Visit.Status.COMPLETED:
+        visit.completed_at = timezone.now()
+        fields.append('completed_at')
+    visit.save(update_fields=fields)
     events.publish(event, resource=visit)
     return visit
 

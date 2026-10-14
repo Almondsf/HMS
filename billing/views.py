@@ -1,15 +1,14 @@
 from django.db import connection
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit.mixins import AuditedReadMixin
 from authentication.permissions import STAFF_ROLES, Role, allow_roles
+from helpers.api import parse_date_param
 from tenants.features import Feature, requires_feature
 
 from . import services
@@ -168,8 +167,5 @@ class DailySummaryView(APIView):
     permission_classes = [BILLING, allow_roles(read=CASHIERS)]
 
     def get(self, request):
-        raw = request.query_params.get('date')
-        day = parse_date(raw) if raw else timezone.localdate()
-        if day is None:
-            raise ValidationError({'date': 'Use YYYY-MM-DD.'})
+        day = parse_date_param(request.query_params, 'date', timezone.localdate())
         return Response(services.daily_summary(day), status=status.HTTP_200_OK)

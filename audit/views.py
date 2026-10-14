@@ -33,7 +33,10 @@ class AuditEventViewSet(viewsets.ReadOnlyModelViewSet):
 
         for name, lookup in (('since', 'occurred_at__gte'), ('until', 'occurred_at__lte')):
             if name in params:
-                moment = parse_datetime(params[name])
+                try:
+                    moment = parse_datetime(params[name])
+                except ValueError:  # well-formed but impossible, e.g. month 13
+                    moment = None
                 if moment is None:
                     raise ValidationError({name: 'Use ISO 8601, e.g. 2026-01-31T09:00:00Z.'})
                 events = events.filter(**{lookup: moment})

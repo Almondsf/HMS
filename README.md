@@ -17,6 +17,7 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 | `terminology` | Shared reference data: ICD-10 diagnosis codes |
 | `billing` | Tariff, invoices built automatically from care, payments, receipts, daily cash summary |
 | `insurance` | HMO / NHIA providers, patient cover, claims and insurer payments |
+| `reports` | Clinical, financial, pharmacy and lab management reports |
 
 ## Quick start
 
@@ -210,6 +211,17 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
 - **Checks:** the cover must belong to the patient and be valid on the date of service, providers that require it need an authorisation code, and an invoice can have only one open claim.
 - **Claim document:** `GET /api/v1/insurance/claims/<id>/document/` returns the member details, ICD-10 diagnoses and itemised charges.
 - **Chasing payment:** `GET /api/v1/insurance/claims/outstanding/` shows what each insurer still owes.
+
+### Reports
+
+Every report takes `?date_from=&date_to=` (`YYYY-MM-DD`, in hospital time). The default is the last 30 days, and the maximum range is a year.
+
+| Endpoint | Shows | Who |
+|---|---|---|
+| `/api/v1/reports/clinical/` | Visits by day, status, triage and doctor; average waiting and consultation time; new patients; top ICD-10 diagnoses | admin |
+| `/api/v1/reports/financial/` | Money collected (patients vs insurers, by method, by day); charges by category; receivables with 0-30 / 31-60 / 61-90 / 91+ day aging; amounts owed by each insurer | admin, cashier |
+| `/api/v1/reports/pharmacy/` | Most dispensed drugs, low stock, stock value, drugs without a price | admin, pharmacist |
+| `/api/v1/reports/lab/` | Tests by type and status, average turnaround time, pending work | admin, lab tech |
 
 ## API conventions
 

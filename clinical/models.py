@@ -39,6 +39,9 @@ class Visit(TrackingModel):
     triaged_by = models.ForeignKey(
         'authentication.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
     )
+    # For waiting-time and consultation-length reports
+    started_at = models.DateTimeField(null=True, blank=True, help_text='When the doctor started seeing the patient')
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Visit of {self.patient} on {self.visit_date:%Y-%m-%d}"

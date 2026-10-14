@@ -62,3 +62,19 @@ def server_error(request):
     from audit.context import current_request_id
 
     return JsonResponse({'detail': 'Something went wrong on our side.', 'request_id': current_request_id()}, status=500)
+
+
+def parse_date_param(params, name, default=None):
+    """A YYYY-MM-DD query parameter as a date (400 on bad input, e.g. 2026-13-01)."""
+    from django.utils.dateparse import parse_date
+
+    raw = params.get(name)
+    if not raw:
+        return default
+    try:
+        value = parse_date(raw)
+    except ValueError:  # well-formed but impossible dates raise
+        value = None
+    if value is None:
+        raise exceptions.ValidationError({name: 'Use a valid date, YYYY-MM-DD.'})
+    return value
