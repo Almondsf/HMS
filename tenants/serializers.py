@@ -4,6 +4,9 @@ from zoneinfo import available_timezones
 
 from rest_framework import serializers
 
+from subscriptions.models import Subscription
+from subscriptions.services import describe
+
 from . import services
 from .features import features_for
 from .models import Hospital
@@ -33,12 +36,13 @@ class HospitalSettingsSerializer(HospitalSettingsValidation, serializers.ModelSe
 
     domain = serializers.SerializerMethodField()
     features = serializers.SerializerMethodField()
+    subscription = serializers.SerializerMethodField()
 
     class Meta:
         model = Hospital
         fields = [
             'name', 'domain', 'plan', 'features', 'contact_email', 'phone', 'address',
-            'timezone', 'currency', 'mrn_prefix',
+            'timezone', 'currency', 'mrn_prefix', 'subscription',
         ]  # fmt: skip
         read_only_fields = ['plan']
 
@@ -48,6 +52,11 @@ class HospitalSettingsSerializer(HospitalSettingsValidation, serializers.ModelSe
 
     def get_features(self, obj):
         return sorted(features_for(obj))
+
+    def get_subscription(self, obj):
+        # Drives the app's renewal banner and read-only notice
+        subscription = Subscription.objects.filter(hospital=obj).first()
+        return describe(subscription) if subscription else None
 
 
 class PlatformHospitalSerializer(HospitalSettingsSerializer):
@@ -86,3 +95,11 @@ class HospitalProvisionSerializer(HospitalSettingsValidation, serializers.Serial
         if self.generated_password:
             data['admin']['temporary_password'] = self.generated_password
         return data
+
+
+class ManualPaymentSerializer(serializers.Serializer):
+    plan = serializers.ChoiceField(choices=Hospital.Plan.choices)
+    interval = serializers.ChoiceField(choices=[('monthly', 'Monthly'), ('yearly', 'Yearly')])
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
+    reference = serializers.CharField(max_length=80, help_text='e.g. the bank transfer reference')
+    note = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')

@@ -266,6 +266,29 @@ Every report takes `?date_from=&date_to=` (`YYYY-MM-DD`, in hospital time). The 
   - **Never** sent: request bodies, query strings (searches can contain patient names), cookies, auth headers, local variables, or names and emails. See [helpers/monitoring.py](helpers/monitoring.py).
   - In the web app, a crash shows a "Something went wrong" screen instead of a blank page.
 
+### Subscriptions (what hospitals pay)
+
+Every new hospital starts with a **14-day free trial**. Its administrators pay under **Subscription** in the web app, monthly or yearly, through Paystack (card, bank or USSD). Prices live in the platform admin (*Plan prices*). They are seeded with placeholders, so set your own before launch.
+
+| State | Access |
+|---|---|
+| Trial or paid period | Everything the plan includes |
+| Up to 7 days overdue (grace) | Everything, with a warning banner |
+| After the grace period, or cancelled and expired | **Read-only**: records stay viewable (patient care never stops), but changes get `402` until someone pays. Signing in and paying still work. |
+
+How payments are trusted:
+- The browser's word is never taken. When a payer returns from Paystack, the API asks Paystack to verify the payment and checks the hospital, plan, amount and currency.
+- Renewals arrive by webhook and are accepted only with a valid Paystack signature.
+- Each payment reference counts once, however often it arrives.
+- Paying early adds to the time remaining. Paying late starts from today.
+
+Setup:
+1. Set `PAYSTACK_SECRET_KEY`. Use `sk_test_...` first; Paystack test cards work end to end.
+2. In the Paystack dashboard (*Settings → API Keys & Webhooks*), set the webhook URL to `https://<platform domain>/api/v1/platform/billing/paystack/webhook/`.
+3. Run `python manage.py sync_paystack_plans` to create matching Paystack plans, which enables automatic renewal. After changing a price, run it again with `--reprice`.
+
+Bank transfers: the platform records them with `POST /api/v1/platform/hospitals/<id>/record-payment/` (`plan`, `interval`, `amount`, `reference`, `note`). Payments and subscriptions are visible in the platform admin. Without a Paystack key, the Subscription page tells admins to pay by transfer.
+
 ## API conventions
 
 - **Versioned:** every endpoint lives under `/api/v1/`.
@@ -361,7 +384,7 @@ Production runs as **one Docker service** ([Dockerfile](Dockerfile)): it builds 
    - `TENANT_BASE_DOMAIN`: e.g. `yourdomain.com`
    - `PLATFORM_DOMAINS`: e.g. `yourdomain.com`
 
-   `SECRET_KEY` is generated automatically.
+   `SECRET_KEY` is generated automatically. For subscriptions, also set `PAYSTACK_SECRET_KEY` (see [Subscriptions](#subscriptions-what-hospitals-pay)).
 3. **Domains:** add `yourdomain.com` and the wildcard `*.yourdomain.com` to the service, and create the DNS records Render shows you. Each hospital then lives at `<name>.yourdomain.com`.
 4. **Each deploy** runs `migrate` (every hospital's schema) and `setup_platform` before switching traffic. The health check is `/api/health/`.
 5. **Create hospitals** from the service's Shell tab (`python manage.py create_hospital ...`) or through the platform API.

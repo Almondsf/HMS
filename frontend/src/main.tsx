@@ -1,6 +1,6 @@
 import './index.css'
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
@@ -15,7 +15,14 @@ import { hospitalDisplayName } from './lib/tenant'
 document.title = hospitalDisplayName()
 initMonitoring()
 
-const queryClient = new QueryClient({
+const queryClient: QueryClient = new QueryClient({
+  // A lapsed subscription refuses changes (402): refresh the hospital so the banner explains why
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 402)
+        void queryClient.invalidateQueries({ queryKey: ['hospital'] })
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

@@ -78,3 +78,19 @@ def parse_date_param(params, name, default=None):
     if value is None:
         raise exceptions.ValidationError({name: 'Use a valid date, YYYY-MM-DD.'})
     return value
+
+
+def app_url(request, path):
+    """
+    A link into the web app for this hospital (emails, payment returns). The
+    app is served at the hospital's own address unless FRONTEND_URL says
+    otherwise (e.g. the Vite dev server: http://{subdomain}.localhost:5173).
+    """
+    from django.conf import settings
+
+    host = request.get_host()
+    if settings.FRONTEND_URL:
+        base = settings.FRONTEND_URL.format(subdomain=host.split('.')[0], host=host)
+    else:
+        base = f'{request.scheme}://{host}'
+    return f'{base.rstrip("/")}/{path.lstrip("/")}'

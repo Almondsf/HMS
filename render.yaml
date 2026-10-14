@@ -45,3 +45,7 @@ services:
         sync: false
       - key: DEFAULT_FROM_EMAIL
         sync: false # e.g. "St Luke's HMS <no-reply@yourdomain.com>"
+      # Subscriptions: Paystack secret key (sk_live_...). Then set the webhook URL in Paystack
+      # to https://<platform domain>/api/v1/platform/billing/paystack/webhook/
+      - key: PAYSTACK_SECRET_KEY
+        sync: false

@@ -7,11 +7,14 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
+from subscriptions.views import paystack_webhook
+
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     # Platform operators sign in here (tokens are only valid on the platform site)
     path('api/v1/auth/', include('authentication.urls')),
     path('api/v1/platform/', include('tenants.urls')),
+    path('api/v1/platform/billing/paystack/webhook/', paystack_webhook, name='paystack-webhook'),
 ]
 
 handler404 = 'helpers.api.not_found'

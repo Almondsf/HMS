@@ -3,6 +3,18 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import type { Feature } from './roles'
 
+export interface SubscriptionStatus {
+  status: 'trialing' | 'active' | 'past_due' | 'cancelled'
+  /** full; warning = overdue but within grace; read_only = nothing new can be saved */
+  access: 'full' | 'warning' | 'read_only'
+  interval: 'monthly' | 'yearly'
+  current_period_end: string
+  grace_ends_at: string
+  days_left: number
+  cancel_at_period_end: boolean
+  auto_renews: boolean
+}
+
 export interface Hospital {
   name: string
   domain: string | null
@@ -14,6 +26,7 @@ export interface Hospital {
   timezone: string
   currency: string
   mrn_prefix: string
+  subscription: SubscriptionStatus | null
 }
 
 export function useHospital() {

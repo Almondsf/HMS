@@ -1,9 +1,10 @@
-import { KeyRound, LogOut, Menu, X } from 'lucide-react'
+import { AlertTriangle, KeyRound, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet } from 'react-router'
 
 import { cx } from '@/components/ui'
 import { useCurrentUser, useAuth } from '@/lib/auth'
+import { formatDate } from '@/lib/format'
 import { useHospital } from '@/lib/hospital'
 import { visibleNavItems } from '@/lib/navigation'
 import { ROLE_LABELS } from '@/lib/roles'
@@ -53,6 +54,49 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </ul>
     </nav>
+  )
+}
+
+/** Overdue or lapsed subscriptions are explained to everyone; only admins can act on them. */
+function SubscriptionBanner() {
+  const user = useCurrentUser()
+  const { data: hospital } = useHospital()
+  const subscription = hospital?.subscription
+  if (!subscription) return null
+  const isAdmin = user.user_type === 'admin'
+  const trialEnding =
+    subscription.status === 'trialing' && subscription.access === 'full' && subscription.days_left <= 3
+
+  let message: string
+  if (subscription.access === 'read_only') {
+    message = "This hospital's subscription has lapsed: records can be viewed, but nothing new can be saved."
+  } else if (subscription.access === 'warning') {
+    message = `Subscription payment is overdue. Records become read-only after ${formatDate(subscription.grace_ends_at)}.`
+  } else if (trialEnding && isAdmin) {
+    message = `Your free trial ends on ${formatDate(subscription.current_period_end)}.`
+  } else {
+    return null
+  }
+  const severe = subscription.access === 'read_only'
+
+  return (
+    <div
+      role="alert"
+      className={cx(
+        'no-print flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2.5 text-sm sm:px-6',
+        severe ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-900',
+      )}
+    >
+      <AlertTriangle className="size-4 shrink-0" aria-hidden />
+      <span>{message}</span>
+      {isAdmin ? (
+        <Link to="/subscription" className="font-medium underline underline-offset-2">
+          {trialEnding ? 'Choose a plan' : 'Pay now'}
+        </Link>
+      ) : (
+        <span>Please let an administrator know.</span>
+      )}
+    </div>
   )
 }
 
@@ -120,6 +164,8 @@ export function AppLayout() {
             </button>
           </div>
         </header>
+
+        <SubscriptionBanner />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Outlet />

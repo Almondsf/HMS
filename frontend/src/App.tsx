@@ -40,6 +40,7 @@ const screens = {
   tariff: page(() => import('@/pages/admin/SetupPages'), 'TariffPage'),
   insurers: page(() => import('@/pages/admin/SetupPages'), 'InsurersPage'),
   settings: page(() => import('@/pages/admin/SettingsPage'), 'SettingsPage'),
+  subscription: page(() => import('@/pages/admin/SubscriptionPage'), 'SubscriptionPage'),
 }
 
 /** path -> [screen, who may open it] */
@@ -66,6 +67,8 @@ const ROUTES: [string, ComponentType, Role[]][] = [
   ['admin/fees', screens.tariff, ACCESS.admin],
   ['admin/insurers', screens.insurers, ACCESS.admin],
   ['admin/settings', screens.settings, ACCESS.admin],
+  // Paystack returns payers here, so keep the path in step with the API's callback URL
+  ['subscription', screens.subscription, ACCESS.admin],
 ]
 
 function RequireAuth({ children }: { children: ReactNode }) {

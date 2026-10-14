@@ -13,6 +13,7 @@ from psycopg2 import sql
 
 from audit import events
 from authentication.models import User
+from subscriptions import services as subscriptions
 
 from .models import Domain, Hospital
 
@@ -75,6 +76,7 @@ def provision_hospital(
             hospital.delete(force_drop=True)
             raise
 
+        subscriptions.start_trial(hospital, email=contact_email or admin_email)
         events.publish('platform.hospital_provisioned', resource=hospital, domain=domain, plan=plan)
     return hospital, admin
 

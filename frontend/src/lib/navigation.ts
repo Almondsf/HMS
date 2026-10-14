@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarDays,
   CreditCard,
+  Crown,
   FlaskConical,
   LayoutDashboard,
   ListOrdered,
@@ -81,6 +82,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/admin/fees', label: 'Fees', icon: Tags, roles: ACCESS.admin, feature: 'billing' },
   { to: '/admin/insurers', label: 'Insurers', icon: ShieldCheck, roles: ACCESS.admin, feature: 'insurance' },
   { to: '/admin/settings', label: 'Settings', icon: Settings, roles: ACCESS.admin },
+  { to: '/subscription', label: 'Subscription', icon: Crown, roles: ACCESS.admin },
 ]
 
 export function visibleNavItems(role: Role, features: Feature[]): NavItem[] {

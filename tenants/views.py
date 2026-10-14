@@ -1,12 +1,20 @@
 from django.db import connection
 from django_tenants.utils import get_public_schema_name
 from rest_framework import generics, mixins, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
+from rest_framework.response import Response
 
 from authentication.permissions import Role, allow_roles
+from subscriptions import services as subscriptions
 
 from .models import Hospital
-from .serializers import HospitalProvisionSerializer, HospitalSettingsSerializer, PlatformHospitalSerializer
+from .serializers import (
+    HospitalProvisionSerializer,
+    HospitalSettingsSerializer,
+    ManualPaymentSerializer,
+    PlatformHospitalSerializer,
+)
 
 
 class IsPlatformOperator(BasePermission):
@@ -37,6 +45,15 @@ class HospitalViewSet(
 
     def get_serializer_class(self):
         return HospitalProvisionSerializer if self.action == 'create' else PlatformHospitalSerializer
+
+    @action(detail=True, methods=['post'], url_path='record-payment')
+    def record_payment(self, request, pk=None):
+        '''Record an offline payment (bank transfer): extends the subscription by one interval.'''
+        data = ManualPaymentSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        hospital = self.get_object()
+        subscriptions.record_manual_payment(hospital=hospital, by=request.user, **data.validated_data)
+        return Response(PlatformHospitalSerializer(Hospital.objects.get(pk=hospital.pk)).data)
 
 
 class HospitalSettingsView(generics.RetrieveUpdateAPIView):

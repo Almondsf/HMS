@@ -20,6 +20,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from audit.recorder import Category, record
+from helpers.api import app_url
 
 from . import services
 from .models import User
@@ -63,12 +64,7 @@ def reset_by_admin(*, user, by):
 def _reset_link(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = token_generator.make_token(user)
-    host = request.get_host()
-    if settings.FRONTEND_URL:
-        base = settings.FRONTEND_URL.format(subdomain=host.split('.')[0], host=host)
-    else:
-        base = f'{request.scheme}://{host}'  # the app is served from the hospital's own address
-    return f'{base.rstrip("/")}/reset-password?uid={uid}&token={token}'
+    return app_url(request, f'/reset-password?uid={uid}&token={token}')
 
 
 def request_reset(*, email, request):

@@ -26,6 +26,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path('api/v1/auth/', include('authentication.urls')),
     path('api/v1/hospital/', HospitalSettingsView.as_view(), name='hospital-settings'),
+    path('api/v1/subscription/', include('subscriptions.urls')),
     path('api/v1/create-profile/', include('profiles.urls')),
     path('api/v1/', include('clinical.urls')),
     path('api/v1/', include('profiles.directory_urls')),

@@ -46,6 +46,8 @@ SHARED_APPS = [
     'audit',
     # Shared reference data (ICD-10 codes)
     'terminology',
+    # What hospitals pay for the platform
+    'subscriptions',
 ]
 
 TENANT_APPS = [
@@ -82,6 +84,7 @@ MIDDLEWARE = [
     'tenants.middleware.HealthCheckMiddleware',
     'tenants.middleware.HospitalMiddleware',  # selects the hospital schema; must precede anything using the DB
     'tenants.middleware.HospitalTimezoneMiddleware',
+    'subscriptions.middleware.SubscriptionAccessMiddleware',
     'helpers.middleware.LegacyApiPathMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -354,3 +357,10 @@ if SENTRY_DSN:
         release=config('RENDER_GIT_COMMIT', default=''),  # Render sets the deployed commit
         traces_sample_rate=config('SENTRY_TRACES_SAMPLE_RATE', default=0.0, cast=float),
     )
+
+
+# Subscriptions (subscriptions app). Payments via Paystack; amounts in naira.
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
+SUBSCRIPTION_TRIAL_DAYS = config('SUBSCRIPTION_TRIAL_DAYS', default=14, cast=int)
+# After a missed renewal: full access with a warning for this long, then read-only
+SUBSCRIPTION_GRACE_DAYS = config('SUBSCRIPTION_GRACE_DAYS', default=7, cast=int)
