@@ -1,16 +1,25 @@
-# profile/views.py
+'''Registration endpoints (/api/create-profile/<role>/). Patients can also be registered at /api/patients/.'''
+
 from rest_framework.generics import CreateAPIView
 
 from authentication.permissions import Role, allow_roles
 from profiles.serializers import (
     DoctorSerializer,
     LabTechSerializer,
+    NurseSerializer,
     PatientSerializer,
     PharmacistSerializer,
     ReceptionistSerializer,
 )
 
-from .models import DoctorProfile, LabTechProfile, PatientProfile, PharmacistProfile, ReceptionistProfile
+from .models import (
+    DoctorProfile,
+    LabTechProfile,
+    NurseProfile,
+    PatientProfile,
+    PharmacistProfile,
+    ReceptionistProfile,
+)
 
 # Front desk registers patients; only admins create staff accounts.
 CanRegisterPatients = allow_roles(write=[Role.ADMIN, Role.RECEPTIONIST])
@@ -27,6 +36,12 @@ class DoctorCreateView(CreateAPIView):
     permission_classes = [CanRegisterStaff]
     serializer_class = DoctorSerializer
     queryset = DoctorProfile.objects.all()
+
+
+class NurseCreateView(CreateAPIView):
+    permission_classes = [CanRegisterStaff]
+    serializer_class = NurseSerializer
+    queryset = NurseProfile.objects.all()
 
 
 class LabTechCreateView(CreateAPIView):

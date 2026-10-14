@@ -7,7 +7,7 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 | App | What it covers |
 |---|---|
 | `authentication` | Email login with JWT, roles, account lockout, logout, password change, `/me` |
-| `profiles` | Patient and staff profiles (doctor, lab tech, pharmacist, receptionist) |
+| `profiles` | Patient registry with medical record numbers, staff directory (doctor, nurse, lab tech, pharmacist, receptionist), departments |
 | `clinical` | Visits, consultations, prescriptions, pharmacy prescription queue |
 | `lab` | Test catalogue, orders (from consultations or walk-in), results |
 | `pharmacy` | Drug stock, dispensing against prescriptions |
@@ -102,8 +102,10 @@ Within a hospital, access is enforced on every endpoint with `authentication.per
 
 | Resource | Read | Write |
 |---|---|---|
-| Register patients | | admin, receptionist |
-| Register staff | | admin |
+| Patients (`/api/patients/`) | doctor, nurse, lab tech, pharmacist · patient: own | admin, receptionist |
+| Staff directory (`/api/staff/`) | all staff | admin (deactivate / activate) |
+| Departments | all staff | admin |
+| Register staff (`/api/create-profile/<role>/`) | | admin |
 | Visits | admin, receptionist, nurse: all · doctor, patient: own | admin, receptionist |
 | Consultations | admin · doctor, patient: own | assigned doctor |
 | Prescriptions queue | pharmacist, admin · doctor, patient: own | (created with consultations) |
@@ -114,6 +116,20 @@ Within a hospital, access is enforced on every endpoint with `authentication.per
 | Audit log | admin | (nobody) |
 
 Receptionists see visits without clinical notes. Clinical and dispensing records can't be deleted through the API.
+
+### Patients and staff
+
+- **Medical record numbers (MRN):**
+  - Assigned at registration as `<prefix>-000123`, using the hospital's `mrn_prefix`.
+  - Numbers come from a locked per-hospital counter, so concurrent registrations never collide.
+  - To keep a patient's existing paper record number, send it as `mrn`; generated numbers skip it.
+  - An MRN never changes.
+- **Patients without email or password:** a patient can be registered with neither (they simply can't sign in). Staff always need both.
+- **Search:** `GET /api/patients/?search=ada obi` matches every word against name, MRN, phone and email.
+- **Staff:**
+  - `GET /api/staff/?role=doctor&department=<id>` lists staff, e.g. for assigning visits.
+  - `POST /api/staff/<id>/deactivate/` disables an account and signs it out everywhere. Accounts are never deleted, and an admin can't deactivate their own account.
+  - Inactive doctors can't be assigned new visits.
 
 ## Architecture
 

@@ -92,7 +92,19 @@ class ConsultationSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class VisitSerializer(serializers.ModelSerializer):
+class VisitValidation:
+    def validate_assigned_doctor(self, doctor):
+        if not doctor.user.is_active:
+            raise serializers.ValidationError('This doctor is no longer active.')
+        return doctor
+
+    def validate_patient(self, patient):
+        if not patient.user.is_active:
+            raise serializers.ValidationError("This patient's record is deactivated.")
+        return patient
+
+
+class VisitSerializer(VisitValidation, serializers.ModelSerializer):
     consultations = ConsultationSerializer(many=True, read_only=True)
 
     class Meta:
@@ -100,7 +112,7 @@ class VisitSerializer(serializers.ModelSerializer):
         fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status', 'consultations']
 
 
-class VisitSummarySerializer(serializers.ModelSerializer):
+class VisitSummarySerializer(VisitValidation, serializers.ModelSerializer):
     '''Visit without clinical notes, for front-desk staff.'''
 
     class Meta:

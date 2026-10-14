@@ -8,16 +8,17 @@ from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, first_name, last_name, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError("Users must have an email address")
+    def create_user(self, first_name, last_name, email=None, password=None, **extra_fields):
+        # Patients may have no email (they don't sign in); everyone else signs in with one
+        if not email and extra_fields.get('user_type', User.UserType.PATIENT) != User.UserType.PATIENT:
+            raise ValueError("Staff users must have an email address")
         if not last_name:
             raise ValueError("Users must have a last name")
         if not first_name:
             raise ValueError("Users must have a first name")
-        email = self.normalize_email(email)
+        email = self.normalize_email(email) if email else None
         user = self.model(first_name=first_name, last_name=last_name, email=email, **extra_fields)
-        user.set_password(password)
+        user.set_password(password)  # None -> unusable password: the account can't sign in
         user.save(using=self._db)
         return user
 
@@ -80,7 +81,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Basic Information
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
-    email = models.EmailField(max_length=100, unique=True, db_index=True)
+    # Optional for patients only; NULLs don't clash under the unique constraint
+    email = models.EmailField(max_length=100, unique=True, db_index=True, null=True, blank=True)
     gender = models.CharField(choices=genderType.choices, max_length=10, blank=True, null=True)
     emergency_contact = models.CharField(max_length=100, blank=True, null=True)
     emergency_phone = models.CharField(max_length=17, blank=True, null=True, validators=[phone_regex])
@@ -134,7 +136,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ]
 
     def __str__(self):
-        return f"{self.get_full_name()} ({self.email})"
+        return f"{self.get_full_name()} ({self.email or 'no email'})"
 
     def get_full_name(self):
         """Return the first_name plus the last_name, with a space in between"""

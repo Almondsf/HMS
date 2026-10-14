@@ -5,7 +5,14 @@ from django_tenants.test.cases import FastTenantTestCase
 from rest_framework.test import APIClient
 
 from authentication.models import User
-from profiles.models import DoctorProfile, LabTechProfile, PatientProfile, PharmacistProfile, ReceptionistProfile
+from profiles.models import (
+    DoctorProfile,
+    LabTechProfile,
+    NurseProfile,
+    PatientProfile,
+    PharmacistProfile,
+    ReceptionistProfile,
+)
 
 PROFILE_MODELS = {
     User.UserType.DOCTOR: DoctorProfile,
@@ -13,6 +20,7 @@ PROFILE_MODELS = {
     User.UserType.LAB_TECHNICIAN: LabTechProfile,
     User.UserType.PHARMACIST: PharmacistProfile,
     User.UserType.RECEPTIONIST: ReceptionistProfile,
+    User.UserType.NURSE: NurseProfile,
 }
 
 TEST_PASSWORD = 'Str0ng-pass!'
@@ -34,6 +42,8 @@ def make_user(user_type, **profile_fields):
     if profile_model:
         if user_type == User.UserType.DOCTOR:
             profile_fields.setdefault('specialty', 'General')
+        if user_type == User.UserType.PATIENT:
+            profile_fields.setdefault('mrn', f'TEST-{n:06d}')
         profile_model.objects.create(user=user, **profile_fields)
     return user
 

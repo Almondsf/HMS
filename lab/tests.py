@@ -90,9 +90,10 @@ class LabWorkflowTests(TenantAPITestCase):
 class LegacyLabOrderMigrationTests(TransactionTestCase):
     '''clinical.LabTestOrder rows must survive the move into the lab module.'''
 
-    users = ('authentication', '0005_login_lockout')
-    before = [('lab', '0003_lab_workflow'), ('clinical', '0002_rename_laborder_labtestorder'), users]
-    after = [('lab', '0004_copy_lab_data'), users]
+    # Everything else pinned to how it was when this migration shipped
+    pinned = [('authentication', '0005_login_lockout'), ('profiles', '0003_alter_pharmacistprofile_user')]
+    before = [('lab', '0003_lab_workflow'), ('clinical', '0002_rename_laborder_labtestorder'), *pinned]
+    after = [('lab', '0004_copy_lab_data'), *pinned]
 
     def setUp(self):
         # A throwaway hospital schema to roll migrations back and forth in

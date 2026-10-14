@@ -8,8 +8,16 @@ class ProfilesConfig(AppConfig):
     def ready(self):
         from audit import registry
 
-        from .models import DoctorProfile, LabTechProfile, PatientProfile, PharmacistProfile, ReceptionistProfile
+        from .models import (
+            Department,
+            DoctorProfile,
+            LabTechProfile,
+            NurseProfile,
+            PatientProfile,
+            PharmacistProfile,
+            ReceptionistProfile,
+        )
 
         registry.register(PatientProfile, patient=lambda profile: profile.pk)
-        for model in (DoctorProfile, LabTechProfile, PharmacistProfile, ReceptionistProfile):
+        for model in (Department, DoctorProfile, NurseProfile, LabTechProfile, PharmacistProfile, ReceptionistProfile):
             registry.register(model)

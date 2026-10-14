@@ -17,7 +17,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     the role is set by the profile serializer that creates the user.
     '''
 
-    password = serializers.CharField(write_only=True, validators=[validate_password], style={'input_type': 'password'})
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        validators=[validate_password],
+        style={'input_type': 'password'},
+        help_text='Required for staff. Patients without one simply cannot sign in.',
+    )
 
     class Meta:
         model = User
@@ -37,11 +43,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'user_type']
 
+    def validate_email(self, value):
+        return value or None  # blank -> NULL, so many email-less patients don't clash
+
     def create(self, validated_data):
-        # Extract password to hash it
-        password = validated_data.pop('password')
-        user = User.objects.create_user(password=password, **validated_data)
-        return user
+        return User.objects.create_user(**validated_data)
 
 
 class UserSerializer(serializers.ModelSerializer):

@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/hospital/', HospitalSettingsView.as_view(), name='hospital-settings'),
     path('api/create-profile/', include('profiles.urls')),
     path('api/', include('clinical.urls')),
+    path('api/', include('profiles.directory_urls')),
     path('api/pharmacy/', include('pharmacy.urls')),
     path('api/lab/', include('lab.urls')),
     path('api/audit/', include('audit.urls')),
