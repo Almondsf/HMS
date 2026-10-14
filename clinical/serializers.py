@@ -1,11 +1,13 @@
 from rest_framework import serializers
 
+from authentication.models import User
 from lab.models import LabTest
 from lab.serializers import TestOrderSerializer
 from pharmacy.models import Drug
 
 from . import services
-from .models import Consultation, Prescription, Visit
+from . import vitals as vitals_rules
+from .models import Consultation, Prescription, Visit, VitalSigns
 
 
 class PrescriptionSerializer(serializers.ModelSerializer):
@@ -92,6 +94,44 @@ class ConsultationSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class VitalSignsSerializer(serializers.ModelSerializer):
+    bmi = serializers.FloatField(read_only=True)
+    flags = serializers.SerializerMethodField()
+    is_critical = serializers.SerializerMethodField()
+    recorded_by_name = serializers.CharField(source='recorded_by.get_full_name', read_only=True, default=None)
+
+    class Meta:
+        model = VitalSigns
+        fields = [
+            'id', 'visit', 'recorded_at', 'recorded_by_name', *vitals_rules.MEASUREMENTS,
+            'bmi', 'flags', 'is_critical', 'notes',
+        ]  # fmt: skip
+        read_only_fields = ['recorded_at']
+
+    def _assessment(self, vitals):
+        return vitals_rules.assess({field: getattr(vitals, field) for field in vitals_rules.MEASUREMENTS})
+
+    def get_flags(self, vitals):
+        return self._assessment(vitals)[0]
+
+    def get_is_critical(self, vitals):
+        return self._assessment(vitals)[1]
+
+    def validate_visit(self, visit):
+        user = self.context['request'].user
+        if user.user_type == User.UserType.DOCTOR and visit.assigned_doctor.user_id != user.id:
+            raise serializers.ValidationError("You can only record vitals for your own patients' visits.")
+        return visit
+
+    def create(self, validated_data):
+        return services.record_vitals(by=self.context['request'].user, **validated_data)
+
+
+class TriageSerializer(serializers.Serializer):
+    triage_level = serializers.ChoiceField(choices=Visit.Triage.choices)
+    triage_notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+
 class VisitValidation:
     def validate_assigned_doctor(self, doctor):
         if not doctor.user.is_active:
@@ -106,11 +146,16 @@ class VisitValidation:
 
 class VisitSerializer(VisitValidation, serializers.ModelSerializer):
     consultations = ConsultationSerializer(many=True, read_only=True)
+    vitals = VitalSignsSerializer(many=True, read_only=True)
 
     class Meta:
         model = Visit
-        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status', 'consultations']
-        read_only_fields = ['status']  # changes via the start / complete / cancel actions
+        fields = [
+            'id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status',
+            'triage_level', 'triage_notes', 'triaged_at', 'vitals', 'consultations',
+        ]  # fmt: skip
+        # Status changes via the start / complete / cancel actions, triage via the triage action
+        read_only_fields = ['status', 'triage_level', 'triage_notes', 'triaged_at']
 
 
 class VisitSummarySerializer(VisitValidation, serializers.ModelSerializer):
@@ -118,8 +163,8 @@ class VisitSummarySerializer(VisitValidation, serializers.ModelSerializer):
 
     class Meta:
         model = Visit
-        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status']
-        read_only_fields = ['status']
+        fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status', 'triage_level']
+        read_only_fields = ['status', 'triage_level']
 
 
 class QueueEntrySerializer(serializers.ModelSerializer):
@@ -134,7 +179,7 @@ class QueueEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Visit
         fields = [
-            'id', 'position', 'status', 'patient', 'doctor', 'reason_for_visit',
+            'id', 'position', 'status', 'triage_level', 'patient', 'doctor', 'reason_for_visit',
             'visit_date', 'waiting_minutes', 'appointment_time',
         ]  # fmt: skip
 

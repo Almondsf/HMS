@@ -16,6 +16,15 @@ class Visit(TrackingModel):
 
     QUEUE_STATUSES = (Status.WAITING, Status.IN_PROGRESS)
 
+    class Triage(models.TextChoices):
+        EMERGENCY = 'emergency', 'Emergency'
+        URGENT = 'urgent', 'Urgent'
+        STANDARD = 'standard', 'Standard'
+        NON_URGENT = 'non_urgent', 'Non-urgent'
+
+    # Queue order: lower is seen first; untriaged patients count as standard
+    TRIAGE_RANK = {Triage.EMERGENCY: 0, Triage.URGENT: 1, Triage.STANDARD: 2, Triage.NON_URGENT: 3}
+
     patient = models.ForeignKey('profiles.PatientProfile', on_delete=models.PROTECT, related_name='visits')
     assigned_doctor = models.ForeignKey(
         'profiles.DoctorProfile', on_delete=models.PROTECT, related_name='assigned_visits'
@@ -24,8 +33,52 @@ class Visit(TrackingModel):
     reason_for_visit = models.TextField()
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.WAITING, db_index=True)
 
+    triage_level = models.CharField(max_length=20, choices=Triage.choices, blank=True)
+    triage_notes = models.TextField(blank=True)
+    triaged_at = models.DateTimeField(null=True, blank=True)
+    triaged_by = models.ForeignKey(
+        'authentication.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    )
+
     def __str__(self):
         return f"Visit of {self.patient} on {self.visit_date:%Y-%m-%d}"
+
+
+class VitalSigns(models.Model):
+    '''One set of observations taken during a visit. Every measurement is optional.'''
+
+    visit = models.ForeignKey(Visit, on_delete=models.PROTECT, related_name='vitals')
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    recorded_by = models.ForeignKey(
+        'authentication.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    )
+    temperature_c = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    pulse_bpm = models.PositiveSmallIntegerField(null=True, blank=True)
+    respiratory_rate = models.PositiveSmallIntegerField(null=True, blank=True, help_text='Breaths per minute')
+    systolic_bp = models.PositiveSmallIntegerField(null=True, blank=True, help_text='mmHg')
+    diastolic_bp = models.PositiveSmallIntegerField(null=True, blank=True, help_text='mmHg')
+    spo2_percent = models.PositiveSmallIntegerField('SpO2 (%)', null=True, blank=True)
+    weight_kg = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    height_cm = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    blood_glucose_mmol = models.DecimalField(
+        'blood glucose (mmol/L)', max_digits=4, decimal_places=1, null=True, blank=True
+    )
+    pain_score = models.PositiveSmallIntegerField(null=True, blank=True, help_text='0 (none) to 10 (worst)')
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-recorded_at']
+        verbose_name_plural = 'vital signs'
+
+    def __str__(self):
+        return f'Vitals for {self.visit} at {self.recorded_at:%H:%M}'
+
+    @property
+    def bmi(self):
+        if self.weight_kg and self.height_cm:
+            metres = float(self.height_cm) / 100
+            return round(float(self.weight_kg) / (metres * metres), 1)
+        return None
 
 
 class Consultation(TrackingModel):

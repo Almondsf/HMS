@@ -5,7 +5,7 @@ CURRENT_VERSION = 'v1'
 # First path segments of the API before it was versioned
 LEGACY_API_SECTIONS = {
     'auth', 'hospital', 'create-profile', 'visits', 'consultations', 'prescriptions', 'patients',
-    'staff', 'departments', 'pharmacy', 'lab', 'audit', 'platform', 'queue', 'appointments',
+    'staff', 'departments', 'pharmacy', 'lab', 'audit', 'platform', 'queue', 'appointments', 'vitals',
 }  # fmt: skip
 
 _LEGACY_PATH = re.compile(r'^/api/(?P<section>[a-z-]+)(?P<rest>/.*)?$')

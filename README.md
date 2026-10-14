@@ -151,6 +151,20 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
   - `/cancel/`, by the front desk while the patient is still waiting
   - Recording a consultation starts a waiting visit automatically.
 
+### Triage and vital signs
+
+- **Vitals:** nurses record vital signs for any visit, doctors for their own patients, with `POST /api/v1/vitals/`.
+  - Every measurement is optional.
+  - Values outside physiological limits are rejected as typos.
+  - Each set comes back with `bmi`, `flags` (e.g. `fever`, `low oxygen saturation`) and `is_critical`.
+  - Critical readings publish `clinical.critical_vitals`.
+  - Readings are never edited; to correct one, record a new set.
+  - `?patient=<id>` returns a patient's history for charting.
+  - Thresholds are in [clinical/vitals.py](clinical/vitals.py). Have them reviewed by your clinical lead.
+- **Triage:** `POST /api/v1/visits/<id>/triage/` sets `triage_level` to `emergency`, `urgent`, `standard` or `non_urgent`.
+  - The queue orders waiting patients by priority, then arrival.
+  - Emergencies publish `clinical.emergency_arrival`.
+
 ## API conventions
 
 - **Versioned:** every endpoint lives under `/api/v1/`.

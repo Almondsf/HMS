@@ -2,7 +2,7 @@ import django_filters as filters
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
 
-from .models import Consultation, Prescription, Visit
+from .models import Consultation, Prescription, Visit, VitalSigns
 
 
 class VisitFilter(filters.FilterSet):
@@ -11,7 +11,7 @@ class VisitFilter(filters.FilterSet):
 
     class Meta:
         model = Visit
-        fields = ['status', 'patient', 'assigned_doctor']
+        fields = ['status', 'patient', 'assigned_doctor', 'triage_level']
 
 
 class ConsultationFilter(filters.FilterSet):
@@ -37,3 +37,11 @@ class PrescriptionFilter(filters.FilterSet):
         # No quantity given: pending until something is dispensed against it
         pending = Q(quantity__isnull=False, dispensed__lt=F('quantity')) | Q(quantity__isnull=True, dispensed=0)
         return queryset.filter(pending) if value else queryset.exclude(pending)
+
+
+class VitalSignsFilter(filters.FilterSet):
+    patient = filters.NumberFilter(field_name='visit__patient')
+
+    class Meta:
+        model = VitalSigns
+        fields = ['visit']

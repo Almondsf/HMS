@@ -9,20 +9,24 @@ from authentication.permissions import Role, allow_roles
 from tenants.features import Feature, requires_feature
 
 from . import services
-from .filters import ConsultationFilter, PrescriptionFilter, VisitFilter
-from .models import Consultation, Prescription, Visit
+from .filters import ConsultationFilter, PrescriptionFilter, VisitFilter, VitalSignsFilter
+from .models import Consultation, Prescription, Visit, VitalSigns
 from .serializers import (
     ConsultationSerializer,
     PrescriptionDetailSerializer,
     QueueEntrySerializer,
+    TriageSerializer,
     VisitSerializer,
     VisitSummarySerializer,
+    VitalSignsSerializer,
 )
 
 # Clinical records are never hard-deleted through the API (no DELETE).
 CLINICAL_RECORD_METHODS = ['get', 'post', 'put', 'patch', 'head', 'options']
 
 BASE_VISIT_PERMISSIONS = [requires_feature(Feature.CLINICAL)]
+
+VISIT_PREFETCH = ['vitals__recorded_by']
 
 CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'lab_orders__results__labtech__user']
 
@@ -48,7 +52,7 @@ class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         if user.user_type == Role.RECEPTIONIST:
             return visits.all()
 
-        visits = visits.prefetch_related(*(f'consultations__{path}' for path in CONSULTATION_PREFETCH))
+        visits = visits.prefetch_related(*VISIT_PREFETCH, *(f'consultations__{path}' for path in CONSULTATION_PREFETCH))
 
         if user.is_superuser or user.user_type in (Role.ADMIN, Role.NURSE):
             return visits.all()
@@ -89,6 +93,22 @@ class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     def cancel(self, request, pk=None):
         '''Front desk: the patient left before being seen.'''
         return self._transition(services.cancel_visit)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[*BASE_VISIT_PERMISSIONS, allow_roles(write=[Role.NURSE, Role.DOCTOR])],
+    )
+    def triage(self, request, pk=None):
+        '''Set the patient's priority in the queue (emergency, urgent, standard, non_urgent).'''
+        data = TriageSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return self._transition(
+            services.triage,
+            by=request.user,
+            level=data.validated_data['triage_level'],
+            notes=data.validated_data['triage_notes'],
+        )
 
     def get_serializer_class(self):
         # Front desk manages visits but doesn't need the clinical notes
@@ -184,11 +204,17 @@ class QueueView(generics.ListAPIView):
             visits = visits.filter(assigned_doctor__user=user)
         elif 'doctor' in self.request.query_params:
             visits = visits.filter(assigned_doctor=self.request.query_params['doctor'])
-        # Patients already with the doctor first, then the waiting line by arrival
+        # Patients already with the doctor first, then the waiting line by
+        # triage priority (emergencies first) and arrival time
         in_room_first = Case(
             When(status=Visit.Status.IN_PROGRESS, then=Value(0)), default=Value(1), output_field=IntegerField()
         )
-        return visits.order_by(in_room_first, 'visit_date')
+        priority = Case(
+            *(When(triage_level=level, then=Value(rank)) for level, rank in Visit.TRIAGE_RANK.items()),
+            default=Value(Visit.TRIAGE_RANK[Visit.Triage.STANDARD]),
+            output_field=IntegerField(),
+        )
+        return visits.order_by(in_room_first, priority, 'visit_date')
 
     def list(self, request, *args, **kwargs):
         visits = list(self.get_queryset())
@@ -204,3 +230,29 @@ class QueueView(generics.ListAPIView):
             visits, many=True, context={**self.get_serializer_context(), 'now': timezone.now()}
         )
         return Response(serializer.data)
+
+
+class VitalSignsViewSet(AuditedReadMixin, viewsets.ModelViewSet):
+    '''
+    Vital signs. Nurses record them for any visit, doctors for their own
+    patients. Observations are never edited: record a new set to correct one.
+    Filters: visit, patient (for charting over time).
+    '''
+
+    serializer_class = VitalSignsSerializer
+    filterset_class = VitalSignsFilter
+    ordering_fields = ['recorded_at']
+    permission_classes = [
+        requires_feature(Feature.CLINICAL),
+        allow_roles(read=[Role.ADMIN, Role.PATIENT], write=[Role.NURSE, Role.DOCTOR]),
+    ]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        vitals = VitalSigns.objects.select_related('visit', 'recorded_by')
+        user = self.request.user
+        if user.user_type == Role.DOCTOR:
+            return vitals.filter(visit__assigned_doctor__user=user)
+        if user.user_type == Role.PATIENT:
+            return vitals.filter(visit__patient__user=user)
+        return vitals

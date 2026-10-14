@@ -2,12 +2,14 @@
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from audit import events
 from lab import services as lab_services
 from tenants.features import Feature, has_feature
 
-from .models import Consultation, Prescription, Visit
+from . import vitals as vitals_rules
+from .models import Consultation, Prescription, Visit, VitalSigns
 
 
 @transaction.atomic
@@ -97,3 +99,34 @@ def add_prescription(*, consultation, drug=None, medication_name='', **fields):
         medication_name=medication_name or drug.name,
         **fields,
     )
+
+
+@transaction.atomic
+def record_vitals(*, visit, by, **readings):
+    '''Record observations; critical values raise a domain event (e.g. to alert the doctor).'''
+    if visit.status == Visit.Status.CANCELLED:
+        raise ValidationError({'visit': 'This visit was cancelled.'})
+    if not any(readings.get(field) is not None for field in vitals_rules.MEASUREMENTS):
+        raise ValidationError('Record at least one measurement.')
+    errors = vitals_rules.implausible(readings)
+    if errors:
+        raise ValidationError(errors)
+
+    vitals = VitalSigns.objects.create(visit=visit, recorded_by=by, **readings)
+    flags, critical = vitals_rules.assess(readings)
+    if critical:
+        events.publish('clinical.critical_vitals', resource=vitals, flags=flags, visit_id=visit.pk)
+    return vitals
+
+
+@transaction.atomic
+def triage(*, visit, by, level, notes=''):
+    if visit.status not in Visit.QUEUE_STATUSES:
+        raise ValidationError('Only patients still in the queue can be triaged.')
+    visit.triage_level, visit.triage_notes = level, notes
+    visit.triaged_at, visit.triaged_by = timezone.now(), by
+    visit.save(update_fields=['triage_level', 'triage_notes', 'triaged_at', 'triaged_by', 'updated_at'])
+    events.publish('clinical.patient_triaged', resource=visit, level=level)
+    if level == Visit.Triage.EMERGENCY:
+        events.publish('clinical.emergency_arrival', resource=visit, doctor_id=visit.assigned_doctor_id)
+    return visit
