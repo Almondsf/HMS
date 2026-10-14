@@ -15,6 +15,7 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 | `audit` | Append-only audit trail, security events, domain events |
 | `tenants` | Hospitals, their addresses, provisioning, the platform site |
 | `terminology` | Shared reference data: ICD-10 diagnosis codes |
+| `billing` | Tariff, invoices built automatically from care, payments, receipts, daily cash summary |
 
 ## Quick start
 
@@ -84,7 +85,7 @@ The response also lists the `features` the hospital's plan includes, so frontend
 
 | Plan | Modules |
 |---|---|
-| Basic | Front desk & consultations, Pharmacy |
+| Basic | Front desk & consultations, Pharmacy, Billing |
 | Pro | + Laboratory |
 | Enterprise | All modules |
 
@@ -178,6 +179,25 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
   - A consultation can have only one active primary diagnosis.
   - When no code fits, a free-text `description` can be used instead.
   - Diagnoses are never deleted; rule them out instead.
+
+### Billing
+
+- **Tariff:** admins configure `ServiceItem`s at `/api/v1/billing/services/`. An item's `charge_on` makes it automatic (`visit_opened`, e.g. a card fee, or `consultation_recorded`); otherwise the cashier adds it by hand. Lab tests are priced by their `cost`, drugs by `unit_price`.
+- **Automatic charges:** each visit's draft invoice collects charges as care happens: visit and consultation fees, lab tests ordered and drugs dispensed. Walk-in lab patients get their own invoice.
+  - Charges run **inside the same transaction** as the clinical action: a service is never recorded without its charge, and a billing failure rolls the action back.
+  - Each source is charged once.
+  - An item with no price is charged at 0 and flagged `needs_price`. Care is never blocked, but the invoice can't be issued until the line is priced.
+- **Invoice flow:** `draft → issued → paid`, or `void`.
+  - Cashiers add lines, price flagged lines, void lines (with a reason) and issue the invoice.
+  - Admins apply discounts (with a reason) and void invoices that have no payments.
+  - After issue, the lines are fixed.
+- **Payments:** `POST /api/v1/billing/payments/` by cashiers, admins or the front desk.
+  - The invoice is locked while a payment is recorded, so a double submission can't overpay; payments can never exceed the balance.
+  - An issued invoice becomes `paid` when its balance reaches zero.
+  - Admins void payments recorded in error, which re-opens the invoice.
+  - `GET /api/v1/billing/payments/<id>/receipt/` returns everything needed to print a receipt.
+- **End of day:** `GET /api/v1/billing/summary/?date=` gives money taken by payment method and cashier, charges by category, and the number of outstanding invoices.
+- **Roles:** a new `cashier` role, created at `/api/v1/create-profile/cashiers/`. Patients can see their own invoices and payments.
 
 ## API conventions
 

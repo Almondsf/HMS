@@ -1,6 +1,7 @@
 from django.urls import path
 
 from profiles.views import (
+    CashierCreateView,
     DoctorCreateView,
     LabTechCreateView,
     NurseCreateView,
@@ -16,4 +17,5 @@ urlpatterns = [
     path('labtechs/', LabTechCreateView.as_view(), name='create-labtech'),
     path('pharmacists/', PharmacistCreateView.as_view(), name='create-pharmacist'),
     path('receptionists/', ReceptionistCreateView.as_view(), name='create-receptionist'),
+    path('cashiers/', CashierCreateView.as_view(), name='create-cashier'),
 ]

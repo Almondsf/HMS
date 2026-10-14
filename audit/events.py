@@ -12,8 +12,13 @@ notifications or billing, without the producing code knowing about them.
     events.publish('lab.result_completed', resource=result, test=result.test.name)
 
 Events are delivered only after the surrounding transaction commits, so a
-rolled-back action never triggers side effects. Every event is also written
-to the audit log.
+rolled-back action never triggers side effects (SMS, email). Every event is
+also written to the audit log.
+
+Handlers that must succeed or fail together with the action itself (e.g.
+billing a dispensed drug) subscribe with in_transaction=True: they run
+immediately inside the publisher's transaction, and an error rolls the whole
+action back.
 '''
 
 import logging
@@ -27,6 +32,7 @@ from .recorder import Category, record
 logger = logging.getLogger('hms.events')
 
 _subscribers = defaultdict(list)
+_transactional_subscribers = defaultdict(list)
 
 
 @dataclass(frozen=True)
@@ -36,9 +42,9 @@ class DomainEvent:
     payload: dict = field(default_factory=dict)
 
 
-def subscribe(name):
+def subscribe(name, *, in_transaction=False):
     def decorator(handler):
-        _subscribers[name].append(handler)
+        (_transactional_subscribers if in_transaction else _subscribers)[name].append(handler)
         return handler
 
     return decorator
@@ -50,6 +56,8 @@ def publish(name, *, resource=None, patient_id=None, **payload):
         payload['patient_id'] = patient_id
     event = DomainEvent(name=name, resource=resource, payload=payload)
     record(name, Category.DOMAIN, resource=resource, patient_id=patient_id, metadata=payload)
+    for handler in _transactional_subscribers[name]:
+        handler(event)  # errors propagate: the publishing action is rolled back
     transaction.on_commit(lambda: _deliver(event))
 
 

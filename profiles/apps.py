@@ -9,6 +9,7 @@ class ProfilesConfig(AppConfig):
         from audit import registry
 
         from .models import (
+            CashierProfile,
             Department,
             DoctorProfile,
             LabTechProfile,
@@ -19,5 +20,13 @@ class ProfilesConfig(AppConfig):
         )
 
         registry.register(PatientProfile, patient=lambda profile: profile.pk)
-        for model in (Department, DoctorProfile, NurseProfile, LabTechProfile, PharmacistProfile, ReceptionistProfile):
+        for model in (
+            Department,
+            DoctorProfile,
+            NurseProfile,
+            LabTechProfile,
+            PharmacistProfile,
+            ReceptionistProfile,
+            CashierProfile,
+        ):
             registry.register(model)

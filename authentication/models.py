@@ -66,6 +66,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         RECEPTIONIST = 'receptionist', _('Receptionist')
         PHARMACIST = 'pharmacist', _('Pharmacist')
         LAB_TECHNICIAN = 'lab_tech', _('Lab Technician')
+        CASHIER = 'cashier', _('Cashier')
 
     class genderType(models.TextChoices):
         MALE = 'male', _('Male')

@@ -14,11 +14,12 @@ class Feature(models.TextChoices):
     CLINICAL = 'clinical', 'Front desk & consultations'
     PHARMACY = 'pharmacy', 'Pharmacy'
     LAB = 'lab', 'Laboratory'
+    BILLING = 'billing', 'Billing & payments'
 
 
 PLAN_FEATURES = {
-    Hospital.Plan.BASIC: {Feature.CLINICAL, Feature.PHARMACY},
-    Hospital.Plan.PRO: {Feature.CLINICAL, Feature.PHARMACY, Feature.LAB},
+    Hospital.Plan.BASIC: {Feature.CLINICAL, Feature.PHARMACY, Feature.BILLING},
+    Hospital.Plan.PRO: {Feature.CLINICAL, Feature.PHARMACY, Feature.LAB, Feature.BILLING},
     Hospital.Plan.ENTERPRISE: set(Feature),
 }
 

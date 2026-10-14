@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from authentication.models import User
 from profiles.models import (
+    CashierProfile,
     DoctorProfile,
     LabTechProfile,
     NurseProfile,
@@ -20,6 +21,7 @@ PROFILE_MODELS = {
     User.UserType.LAB_TECHNICIAN: LabTechProfile,
     User.UserType.PHARMACIST: PharmacistProfile,
     User.UserType.RECEPTIONIST: ReceptionistProfile,
+    User.UserType.CASHIER: CashierProfile,
     User.UserType.NURSE: NurseProfile,
 }
 

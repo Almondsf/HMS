@@ -11,6 +11,9 @@ class Drug(TrackingModel):
     unit = models.CharField(max_length=20, default="unit")  # tablets, ml, capsules, etc.
     quantity_in_stock = models.PositiveIntegerField(default=0)
     reorder_level = models.PositiveIntegerField(default=0)
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, help_text='Selling price per unit; billed on dispensing'
+    )
 
     def __str__(self):
         return self.name

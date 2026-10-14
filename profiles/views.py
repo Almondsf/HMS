@@ -4,6 +4,7 @@ from rest_framework.generics import CreateAPIView
 
 from authentication.permissions import Role, allow_roles
 from profiles.serializers import (
+    CashierSerializer,
     DoctorSerializer,
     LabTechSerializer,
     NurseSerializer,
@@ -13,6 +14,7 @@ from profiles.serializers import (
 )
 
 from .models import (
+    CashierProfile,
     DoctorProfile,
     LabTechProfile,
     NurseProfile,
@@ -54,6 +56,12 @@ class PharmacistCreateView(CreateAPIView):
     permission_classes = [CanRegisterStaff]
     serializer_class = PharmacistSerializer
     queryset = PharmacistProfile.objects.all()
+
+
+class CashierCreateView(CreateAPIView):
+    permission_classes = [CanRegisterStaff]
+    serializer_class = CashierSerializer
+    queryset = CashierProfile.objects.all()
 
 
 class ReceptionistCreateView(CreateAPIView):

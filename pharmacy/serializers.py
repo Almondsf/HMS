@@ -18,6 +18,7 @@ class DrugSerializer(serializers.ModelSerializer):
             'unit',
             'quantity_in_stock',
             'reorder_level',
+            'unit_price',
             'is_low_stock',
             'created_at',
             'updated_at',

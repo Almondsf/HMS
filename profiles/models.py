@@ -94,6 +94,13 @@ class PharmacistProfile(models.Model):
         return f"Pharmacist: {self.user.first_name} {self.user.last_name}"
 
 
+class CashierProfile(models.Model):
+    user = models.OneToOneField('authentication.User', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Cashier: {self.user.get_full_name()}"
+
+
 class ReceptionistProfile(models.Model):
     user = models.OneToOneField('authentication.User', on_delete=models.CASCADE)
 

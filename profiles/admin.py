@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import DoctorProfile, LabTechProfile, PatientProfile, PharmacistProfile, ReceptionistProfile
+from .models import (
+    CashierProfile,
+    DoctorProfile,
+    LabTechProfile,
+    PatientProfile,
+    PharmacistProfile,
+    ReceptionistProfile,
+)
 
 USER_SEARCH = ['user__first_name', 'user__last_name', 'user__email']
 
@@ -19,7 +26,7 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     list_select_related = ['user']
 
 
-@admin.register(LabTechProfile, PharmacistProfile, ReceptionistProfile)
+@admin.register(LabTechProfile, PharmacistProfile, ReceptionistProfile, CashierProfile)
 class StaffProfileAdmin(admin.ModelAdmin):
     search_fields = USER_SEARCH
     list_select_related = ['user']

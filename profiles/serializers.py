@@ -7,6 +7,7 @@ from authentication.serializers import UserRegistrationSerializer
 
 from . import services
 from .models import (
+    CashierProfile,
     Department,
     DoctorProfile,
     LabTechProfile,
@@ -115,6 +116,14 @@ class PharmacistSerializer(BaseProfileSerializer):
 
     class Meta:
         model = PharmacistProfile
+        fields = '__all__'
+
+
+class CashierSerializer(BaseProfileSerializer):
+    user_type = User.UserType.CASHIER
+
+    class Meta:
+        model = CashierProfile
         fields = '__all__'
 
 
