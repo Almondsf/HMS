@@ -57,7 +57,7 @@ npm run build      # type-check + production build into dist/
 ```
 
 - **Which hospital:** the app works out the hospital from its own address (`main.localhost:5173` means hospital `main`), and talks to that hospital's API at `http://main.localhost:8000` by default. In production, set `VITE_TENANT_BASE_DOMAIN` and `VITE_API_URL` (see [frontend/.env.example](frontend/.env.example)).
-- **Sessions:** access tokens refresh automatically, and simultaneous expiries trigger a single refresh. Signing out revokes the refresh token on the server.
+- **Sessions:** nothing is kept in browser storage. The refresh token lives in an `httpOnly` cookie, so page scripts can't read or steal it, and it's limited to `/api/v1/auth/`. The short-lived access token is held in memory, and the session is restored from the cookie after a reload. Requests that need a refresh at the same moment share one refresh, because refresh tokens rotate. Signing out revokes the token and clears the cookie. API clients that send the refresh token in the JSON body work as before; browsers opt into cookies with the `X-HMS-Auth-Mode: cookie` header, which also guards against CSRF.
 - **Hosting:** `dist/` is static files, so it can be served from any static host or CDN.
 
 **Screens by role** (the sidebar shows only what the role and the hospital's plan allow):
@@ -130,6 +130,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `create_hospital --name --schema --admin-email [--domain --plan]` | Provision a hospital: schema, address and first admin |
 | `adopt_legacy_data --schema <hospital> [--force]` | One-time upgrade: copy a pre-multi-tenancy database (data in `public`) into a hospital |
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
+| `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
 
 ## Roles and access

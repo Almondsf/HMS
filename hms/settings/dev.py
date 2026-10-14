@@ -19,6 +19,7 @@ CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS or [
 CORS_ALLOWED_ORIGIN_REGEXES = CORS_ALLOWED_ORIGIN_REGEXES or [r'^http://([a-z0-9-]+\.)?localhost:(3000|5173)$']
 
 API_DOCS_PUBLIC = True
+AUTH_REFRESH_COOKIE_SECURE = False  # local http://
 
 # Human-readable logs locally unless LOG_FORMAT says otherwise
 LOGGING['handlers']['console']['formatter'] = config('LOG_FORMAT', default='text')  # noqa: F405

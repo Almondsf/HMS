@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +14,42 @@ from . import services
 from .serializers import ChangePasswordSerializer, LoginSerializer, LogoutSerializer, UserSerializer
 from .tokens import TenantTokenRefreshSerializer, check_token_tenant
 
+# ---- Cookie mode (browsers) ----
+#
+# API clients send and receive the refresh token in the JSON body. Browsers
+# opt into cookie mode with the X-HMS-Auth-Mode: cookie header: the refresh
+# token then lives in an httpOnly cookie that page scripts can't read, so an
+# injected script can't steal a long-lived session. The custom header doubles
+# as CSRF protection: a cross-site form can't send it, and a cross-origin
+# fetch that does is subject to the CORS allow-list.
+
+AUTH_MODE_HEADER = 'X-HMS-Auth-Mode'
+
+
+def cookie_mode(request):
+    return request.headers.get(AUTH_MODE_HEADER, '').lower() == 'cookie'
+
+
+def move_refresh_to_cookie(response):
+    '''Take the refresh token out of the body and set it as an httpOnly cookie.'''
+    refresh = response.data.pop('refresh', None)
+    if refresh:
+        response.set_cookie(
+            settings.AUTH_REFRESH_COOKIE,
+            refresh,
+            max_age=int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds()),
+            httponly=True,
+            secure=settings.AUTH_REFRESH_COOKIE_SECURE,
+            samesite='Lax',
+            path=settings.AUTH_REFRESH_COOKIE_PATH,
+        )
+    return response
+
+
+def clear_refresh_cookie(response):
+    response.delete_cookie(settings.AUTH_REFRESH_COOKIE, path=settings.AUTH_REFRESH_COOKIE_PATH, samesite='Lax')
+    return response
+
 
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
@@ -20,31 +57,62 @@ class LoginView(TokenObtainPairView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'login'
 
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        return move_refresh_to_cookie(response) if cookie_mode(request) else response
+
 
 class TenantTokenRefreshView(TokenRefreshView):
     serializer_class = TenantTokenRefreshSerializer
 
+    def post(self, request, *args, **kwargs):
+        if not cookie_mode(request):
+            return super().post(request, *args, **kwargs)
+
+        serializer = self.get_serializer(data={'refresh': request.COOKIES.get(settings.AUTH_REFRESH_COOKIE, '')})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(exc.args[0]) from exc
+        # Rotation issues a new refresh token: it replaces the cookie
+        return move_refresh_to_cookie(Response(dict(serializer.validated_data), status=status.HTTP_200_OK))
+
 
 class LogoutView(APIView):
-    '''Revoke a refresh token so it can't be used to get new access tokens.'''
+    '''
+    Revoke a refresh token so it can't be used to get new access tokens. In
+    cookie mode the cookie itself proves the session (the access token may
+    already have expired), and it is cleared.
+    '''
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     serializer_class = LogoutSerializer
 
     def post(self, request):
-        serializer = LogoutSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        using_cookie = cookie_mode(request)
+        if using_cookie:
+            raw = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE, '')
+        else:
+            if not request.user.is_authenticated:
+                return Response({'detail': 'Authentication credentials were not provided.'}, status=401)
+            serializer = LogoutSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            raw = serializer.validated_data['refresh']
+
         try:
-            token = RefreshToken(serializer.validated_data['refresh'])
+            token = RefreshToken(raw)
             check_token_tenant(token)
-            if str(token.get('user_id')) != str(request.user.id):
+            if request.user.is_authenticated and str(token.get('user_id')) != str(request.user.id):
                 raise TokenError('Token does not belong to this user')
             token.blacklist()
         except (TokenError, InvalidToken):
             record('logout_failed', Category.SECURITY)
-            return Response({'detail': 'Invalid or expired refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
-        record('logout', Category.SECURITY)
-        return Response(status=status.HTTP_205_RESET_CONTENT)
+            response = Response({'detail': 'Invalid or expired refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return clear_refresh_cookie(response) if using_cookie else response
+
+        record('logout', Category.SECURITY, metadata={'user_id': token.get('user_id')})
+        response = Response(status=status.HTTP_205_RESET_CONTENT)
+        return clear_refresh_cookie(response) if using_cookie else response
 
 
 class MeView(generics.RetrieveUpdateAPIView):

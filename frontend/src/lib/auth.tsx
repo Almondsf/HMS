@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
-import { api, SESSION_ENDED, tokenStore, type Tokens } from './api'
+import { api, restoreSession, session, SESSION_ENDED } from './api'
 import type { Role } from './roles'
 
 export interface CurrentUser {
@@ -15,7 +15,7 @@ export interface CurrentUser {
 
 interface AuthState {
   user: CurrentUser | null
-  /** True while checking a stored session on page load. */
+  /** True while checking for an existing session on page load. */
   loading: boolean
   login: (email: string, password: string) => Promise<CurrentUser>
   logout: () => Promise<void>
@@ -26,21 +26,31 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [user, setUser] = useState<CurrentUser | null>(null)
-  const [loading, setLoading] = useState(() => tokenStore.get() !== null)
+  const [loading, setLoading] = useState(true)
 
   const endSession = useCallback(() => {
-    tokenStore.clear()
+    session.set(null)
     setUser(null)
     queryClient.clear()
   }, [queryClient])
 
-  // Restore a stored session on load
+  // Restore the session from the httpOnly refresh cookie (nothing is kept in browser storage)
   useEffect(() => {
-    if (!tokenStore.get()) return
-    api<CurrentUser>('/api/v1/auth/me/')
-      .then(setUser)
-      .catch(endSession)
-      .finally(() => setLoading(false))
+    let cancelled = false
+    restoreSession()
+      .then((access) => (access ? api<CurrentUser>('/api/v1/auth/me/') : null))
+      .then((me) => {
+        if (!cancelled) setUser(me)
+      })
+      .catch(() => {
+        if (!cancelled) endSession()
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [endSession])
 
   // The API client signals when the session can't be renewed
@@ -50,23 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [endSession])
 
   const login = useCallback(async (email: string, password: string) => {
-    const tokens = await api<Tokens>('/api/v1/auth/login/', {
+    // In cookie mode the refresh token arrives as an httpOnly cookie, not in the body
+    const { access } = await api<{ access: string }>('/api/v1/auth/login/', {
       method: 'POST',
       body: { email, password },
       anonymous: true,
     })
-    tokenStore.set({ access: tokens.access, refresh: tokens.refresh })
+    session.set(access)
     const me = await api<CurrentUser>('/api/v1/auth/me/')
     setUser(me)
     return me
   }, [])
 
   const logout = useCallback(async () => {
-    const tokens = tokenStore.get()
-    if (tokens) {
-      // Revoke the refresh token server-side; sign out locally regardless
-      await api('/api/v1/auth/logout/', { method: 'POST', body: { refresh: tokens.refresh } }).catch(() => undefined)
-    }
+    // Revokes the refresh token server-side and clears the cookie; sign out locally regardless
+    await api('/api/v1/auth/logout/', { method: 'POST', body: {}, anonymous: true }).catch(() => undefined)
     endSession()
   }, [endSession])
 

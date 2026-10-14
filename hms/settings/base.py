@@ -10,6 +10,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from corsheaders.defaults import default_headers
 from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -222,6 +223,14 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 # e.g. ^https://[a-z0-9-]+\.hms\.app$ to allow every hospital's frontend
 CORS_ALLOWED_ORIGIN_REGEXES = config('CORS_ALLOWED_ORIGIN_REGEXES', default='', cast=Csv())
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+# Browsers keep the refresh token in an httpOnly cookie (see authentication/views.py),
+# so cross-origin requests from allowed frontends must be able to carry it
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (*default_headers, 'x-hms-auth-mode')
+
+AUTH_REFRESH_COOKIE = 'hms_refresh'
+AUTH_REFRESH_COOKIE_PATH = '/api/v1/auth/'  # only sent to the auth endpoints
+AUTH_REFRESH_COOKIE_SECURE = True  # HTTPS only; relaxed in dev
 
 
 # Security headers that are safe in every environment

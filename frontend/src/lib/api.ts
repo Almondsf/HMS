@@ -38,40 +38,27 @@ function messageFrom(data: unknown, status: number): string {
   return 'Request failed.'
 }
 
-// ---- Tokens (kept per hospital, so two hospitals in one browser don't mix) ----
-
-export interface Tokens {
-  access: string
-  refresh: string
-}
+// ---- Session ----
+//
+// The refresh token lives in an httpOnly cookie set by the API (cookie mode):
+// page scripts can't read it, so an injected script can't steal the session.
+// The short-lived access token is kept in memory only; after a reload the
+// session is restored from the cookie (see restoreSession).
 
 const hospital = currentHospital()
-const storageKey = `hms.tokens.${hospital ?? 'platform'}`
+let accessToken: string | null = null
 
-export const tokenStore = {
-  get(): Tokens | null {
-    try {
-      const raw = localStorage.getItem(storageKey)
-      return raw ? (JSON.parse(raw) as Tokens) : null
-    } catch {
-      return null
-    }
+export const session = {
+  get access() {
+    return accessToken
   },
-  set(tokens: Tokens) {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(tokens))
-    } catch {
-      // Storage unavailable (private mode): the session lasts until reload
-    }
-  },
-  clear() {
-    try {
-      localStorage.removeItem(storageKey)
-    } catch {
-      // ignore
-    }
+  set(access: string | null) {
+    accessToken = access
   },
 }
+
+/** Sent on auth requests so the API uses the cookie instead of the JSON body. */
+const COOKIE_MODE = { 'X-HMS-Auth-Mode': 'cookie' }
 
 /** Fired when the session can't be renewed; the auth provider signs the user out. */
 export const SESSION_ENDED = 'hms:session-ended'
@@ -99,46 +86,58 @@ function buildUrl(path: string, query?: Query): string {
   return url.toString()
 }
 
-async function send(path: string, options: RequestOptions, accessToken?: string): Promise<Response> {
-  const headers: Record<string, string> = { Accept: 'application/json' }
+async function send(path: string, options: RequestOptions, access?: string | null): Promise<Response> {
+  const headers: Record<string, string> = { Accept: 'application/json', ...COOKIE_MODE }
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
-  if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+  if (access) headers.Authorization = `Bearer ${access}`
   return fetch(buildUrl(path, options.query), {
     method: options.method ?? 'GET',
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
+    credentials: 'include', // send the refresh cookie (the API is on another port/host)
   })
 }
 
-// One refresh at a time: requests that fail together all wait for the same refresh
+// Refresh tokens rotate (each use revokes the previous one), so two refreshes
+// sent at once with the same cookie would fail. Everyone shares one in flight:
+// requests that hit 401 together, and React running start-up effects twice.
 let refreshing: Promise<string | null> | null = null
 
-async function refreshAccessToken(): Promise<string | null> {
-  const tokens = tokenStore.get()
-  if (!tokens) return null
+async function requestNewAccessToken(): Promise<string | null> {
   try {
-    const response = await send('/api/v1/auth/token/refresh/', { method: 'POST', body: { refresh: tokens.refresh } })
-    if (!response.ok) throw new Error('refresh rejected')
-    const renewed = (await response.json()) as Partial<Tokens>
-    // Refresh tokens rotate: keep the new one when the server sends it
-    tokenStore.set({ access: renewed.access!, refresh: renewed.refresh ?? tokens.refresh })
-    return renewed.access!
+    const response = await send('/api/v1/auth/token/refresh/', { method: 'POST', body: {} })
+    if (!response.ok) return null
+    const { access } = (await response.json()) as { access: string }
+    session.set(access)
+    return access
   } catch {
-    tokenStore.clear()
-    window.dispatchEvent(new Event(SESSION_ENDED))
     return null
   }
 }
 
-export async function api<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
-  let response = await send(path, options, options.anonymous ? undefined : tokenStore.get()?.access)
+/** Get a new access token using the refresh cookie; null if there's no valid session. */
+export function restoreSession(): Promise<string | null> {
+  refreshing ??= requestNewAccessToken().finally(() => {
+    refreshing = null
+  })
+  return refreshing
+}
 
-  if (response.status === 401 && !options.anonymous && tokenStore.get()) {
-    refreshing ??= refreshAccessToken().finally(() => {
-      refreshing = null
-    })
-    const access = await refreshing
+async function refreshAccessToken(): Promise<string | null> {
+  const access = await restoreSession()
+  if (!access) {
+    session.set(null)
+    window.dispatchEvent(new Event(SESSION_ENDED))
+  }
+  return access
+}
+
+export async function api<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+  let response = await send(path, options, options.anonymous ? undefined : session.access)
+
+  if (response.status === 401 && !options.anonymous && session.access) {
+    const access = await refreshAccessToken()
     if (access) response = await send(path, options, access)
   }
 
