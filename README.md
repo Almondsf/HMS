@@ -131,6 +131,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `adopt_legacy_data --schema <hospital> [--force]` | One-time upgrade: copy a pre-multi-tenancy database (data in `public`) into a hospital |
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
 | `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
+| `database_report` | JSON summary per schema (row counts, migrations, audit protection), used to verify backups |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
 
 ## Roles and access
@@ -366,6 +367,10 @@ Production runs as **one Docker service** ([Dockerfile](Dockerfile)): it builds 
 5. **Create hospitals** from the service's Shell tab (`python manage.py create_hospital ...`) or through the platform API.
 
 The Docker image needs no other configuration: the hospital domain is injected into the web app at runtime (`window.__HMS_CONFIG__`), so one build works on any domain. To deploy without Docker, build the frontend (`cd frontend && npm ci && npm run build`) before `collectstatic`; Django serves `frontend/dist` when it exists.
+
+### Backups
+
+See **[docs/BACKUP_AND_RESTORE.md](docs/BACKUP_AND_RESTORE.md)**: Render's managed backups, `scripts/backup.sh` before risky changes, a monthly restore drill (`scripts/restore_drill.sh`, tested) and the real-restore procedure. Backups contain patient data: never commit them (`backups/` is git-ignored).
 
 ### Upgrading the existing single-hospital deployment
 

@@ -169,3 +169,7 @@ staticfiles
 
 # Local demo accounts (never commit)
 DEMO_CREDENTIALS.md
+
+# Database backups contain patient data (never commit)
+backups/
+*.dump
