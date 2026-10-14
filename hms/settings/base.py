@@ -299,6 +299,18 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# The built web app (cd frontend && npm run build), served at each hospital's address
+FRONTEND_DIST = BASE_DIR / 'frontend' / 'dist'
+if FRONTEND_DIST.is_dir():
+    WHITENOISE_ROOT = FRONTEND_DIST
+
+
+def WHITENOISE_IMMUTABLE_FILE_TEST(path, url):  # noqa: N802 (setting name)
+    # Vite fingerprints everything under /assets/: cache it forever
+    return url.startswith('/assets/')
+
+
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').is_dir() else []
 
 STORAGES = {

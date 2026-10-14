@@ -341,31 +341,36 @@ Optional local hooks: `pip install pre-commit && pre-commit install`.
 
 ## Deploying (Render)
 
-1. **Domains:**
-   - Choose a base domain for hospitals, e.g. `hms.app`.
-   - Add a wildcard custom domain (`*.hms.app`) to the Render service.
-   - Point a wildcard DNS record at Render.
-2. **Environment variables:**
-   - `DATABASE_URL` and `SECRET_KEY`
-   - `TENANT_BASE_DOMAIN=hms.app`
-   - `PLATFORM_DOMAINS`: e.g. `hms.app`. Render's own hostname is added automatically.
-   - `CORS_ALLOWED_ORIGINS` or `CORS_ALLOWED_ORIGIN_REGEXES` for your frontends
-3. **Build command:** `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py setup_platform`
-4. **Start command:** `gunicorn hms.wsgi --access-logfile -`
-5. **Health check path:** `/api/health/`
-6. **Create hospitals** from the Render shell: `python manage.py create_hospital ...`
+Production runs as **one Docker service** ([Dockerfile](Dockerfile)): it builds the web app, and Django serves it at each hospital's address next to the API. That means the same origin, no CORS setup, and a first-party session cookie. The service is described in [render.yaml](render.yaml).
 
-On Render, `manage.py` automatically uses production settings. Elsewhere, set `DJANGO_SETTINGS_MODULE=hms.settings.prod`. A production [Dockerfile](Dockerfile) is also provided: it runs as a non-root user and includes a health check.
+1. **Database:** use your existing Render Postgres (back it up first), or create one for a new install. The blueprint deliberately doesn't create one.
+2. **Create the service:** in the Render dashboard, choose *New → Blueprint* and pick this repository. Fill in:
+   - `DATABASE_URL`: your Postgres internal URL
+   - `TENANT_BASE_DOMAIN`: e.g. `yourdomain.com`
+   - `PLATFORM_DOMAINS`: e.g. `yourdomain.com`
 
-### Upgrading a single-hospital deployment
+   `SECRET_KEY` is generated automatically.
+3. **Domains:** add `yourdomain.com` and the wildcard `*.yourdomain.com` to the service, and create the DNS records Render shows you. Each hospital then lives at `<name>.yourdomain.com`.
+4. **Each deploy** runs `migrate` (every hospital's schema) and `setup_platform` before switching traffic. The health check is `/api/health/`.
+5. **Create hospitals** from the service's Shell tab (`python manage.py create_hospital ...`) or through the platform API.
+
+The Docker image needs no other configuration: the hospital domain is injected into the web app at runtime (`window.__HMS_CONFIG__`), so one build works on any domain. To deploy without Docker, build the frontend (`cd frontend && npm ci && npm run build`) before `collectstatic`; Django serves `frontend/dist` when it exists.
+
+### Upgrading the existing single-hospital deployment
 
 Before multi-tenancy, all data lived in the `public` schema. To move it into a hospital:
 
-1. Back up the database.
-2. Deploy. The build command migrates the shared schema and registers the platform.
-3. In the Render shell, create the hospital:
-   `python manage.py create_hospital --name "..." --schema main --admin-email ...`
-4. Then copy the data:
-   `python manage.py adopt_legacy_data --schema main --force`
+1. **Back up the database.**
+2. Deploy as above. Migrations prepare the shared schema and register the platform.
+3. In the service Shell, run:
 
-`--force` is needed because the new hospital already contains its setup admin. The copy replaces it with your existing users, who keep their passwords. The source tables in `public` are left untouched and can be dropped once you've verified the hospital.
+   ```bash
+   python manage.py create_hospital --name "Main Hospital" --schema main --admin-email you@example.com
+   python manage.py adopt_legacy_data --schema main --force
+   python manage.py revoke_patient_privileges
+   ```
+
+   - `create_hospital` creates the hospital.
+   - `adopt_legacy_data` copies your data into it. `--force` is needed because the new hospital already contains its setup admin; the copy replaces that admin with your existing users, who keep their passwords.
+   - `revoke_patient_privileges` removes admin rights from patient accounts created through the old open registration.
+4. Open `https://main.yourdomain.com`, sign in and check the data. The original tables in `public` are left untouched until you choose to drop them.

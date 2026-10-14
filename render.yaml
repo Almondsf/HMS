@@ -1,0 +1,33 @@
+# Render Blueprint: one Docker service running the API and the web app.
+# https://render.com/docs/blueprint-spec
+#
+# Deliberately does NOT create a database: point DATABASE_URL at your
+# existing Postgres (Render dashboard -> your database -> Internal URL).
+# For a brand-new install, create a Postgres instance first.
+#
+# After the first deploy, add custom domains to this service:
+#   yourdomain.com     (the platform site; also list it in PLATFORM_DOMAINS)
+#   *.yourdomain.com   (every hospital, e.g. stlukes.yourdomain.com)
+# and point DNS for both at Render as the dashboard instructs.
+
+services:
+  - type: web
+    name: hms
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health/
+    # Runs before each new version goes live; migrates every hospital's schema
+    preDeployCommand: python manage.py migrate --noinput && python manage.py setup_platform
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: hms.settings.prod
+      - key: DATABASE_URL
+        sync: false # paste your Postgres internal URL
+      - key: SECRET_KEY
+        generateValue: true
+      - key: TENANT_BASE_DOMAIN
+        sync: false # e.g. yourdomain.com -> hospitals at <name>.yourdomain.com
+      - key: PLATFORM_DOMAINS
+        sync: false # e.g. yourdomain.com (Render's own hostname is added automatically)
+      - key: LOG_FORMAT
+        value: json

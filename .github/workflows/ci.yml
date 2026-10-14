@@ -84,3 +84,26 @@ jobs:
         run: npm run build
       - name: Known vulnerabilities in dependencies
         run: npm audit --audit-level=high
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Production image builds (web app + API)
+        run: docker build -t hms:ci .
+      - name: Container boots and answers health checks
+        run: |
+          docker run -d --name hms -p 8000:8000 \
+            -e SECRET_KEY=ci-only-0123456789abcdefghijklmnopqrstuvwxyz0123456789 \
+            -e PLATFORM_DOMAINS=localhost -e TENANT_BASE_DOMAIN=example.test \
+            -e DATABASE_URL=postgres://nobody:nothing@127.0.0.1:5432/none \
+            hms:ci
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/health/ || true)
+            # 503 is expected here (no database); it proves the app booted and serves requests
+            if [ "$code" = "200" ] || [ "$code" = "503" ]; then echo "health: $code"; exit 0; fi
+            sleep 2
+          done
+          docker logs hms; exit 1
+      - name: Web app is inside the image
+        run: docker run --rm --entrypoint sh hms:ci -c 'test -f frontend/dist/index.html && ls frontend/dist/assets | head -3'

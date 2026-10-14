@@ -1,7 +1,9 @@
 import json
+import tempfile
 from datetime import timedelta
+from pathlib import Path
 
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 from django.utils import timezone
 from rest_framework import status
 
@@ -9,6 +11,7 @@ from authentication.models import User
 from clinical.models import Prescription, Visit
 from helpers.api import server_error
 from helpers.testing import TenantAPITestCase, make_consultation, make_user
+from hms import spa
 from pharmacy.models import Drug
 
 Role = User.UserType
@@ -34,12 +37,10 @@ class VersioningTests(TenantAPITestCase):
 
 
 class ErrorFormatTests(TenantAPITestCase):
-    def test_unknown_urls_return_json_404(self):
-        for path in ['/api/v1/nothing-here/', '/not-an-api/']:
-            with self.subTest(path=path):
-                response = self.client.get(path)
-                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-                self.assertEqual(response.json(), {'detail': 'Not found.'})
+    def test_unknown_api_urls_return_json_404(self):
+        response = self.client.get('/api/v1/nothing-here/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json(), {'detail': 'Not found.'})
 
     def test_server_errors_return_json_with_request_id(self):
         response = server_error(RequestFactory().get('/api/v1/visits/'))
@@ -96,3 +97,29 @@ class FilteringTests(TenantAPITestCase):
             make_consultation()
         self.assertEqual(len(self.client.get('/api/v1/visits/', {'page_size': 2}).data['results']), 2)
         self.assertEqual(len(self.client.get('/api/v1/visits/', {'page_size': 1000}).data['results']), 3)
+
+
+class WebAppTests(TenantAPITestCase):
+    """Non-API paths serve the built web app, with runtime config injected."""
+
+    def setUp(self):
+        spa._index_html.cache_clear()
+        self.addCleanup(spa._index_html.cache_clear)
+
+    def test_app_routes_serve_index_with_config(self):
+        with tempfile.TemporaryDirectory() as dist:
+            Path(dist, 'index.html').write_text('<html><head><title>HMS</title></head><body></body></html>')
+            with override_settings(FRONTEND_DIST=Path(dist), TENANT_BASE_DOMAIN='hms.example'):
+                for path in ['/', '/queue', '/patients/12']:
+                    with self.subTest(path=path):
+                        response = self.client.get(path)
+                        self.assertEqual(response.status_code, 200)
+                        html = response.content.decode()
+                        self.assertIn('window.__HMS_CONFIG__ = {"tenantBaseDomain": "hms.example", "apiUrl": ""}', html)
+                        self.assertEqual(response['Cache-Control'], 'no-cache')
+
+    def test_without_a_built_app_paths_go_to_the_api_docs(self):
+        with tempfile.TemporaryDirectory() as empty, override_settings(FRONTEND_DIST=Path(empty)):
+            response = self.client.get('/queue')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/api/docs/')
