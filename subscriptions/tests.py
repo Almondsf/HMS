@@ -26,6 +26,13 @@ SECRET = 'sk_test_secret'
 WEBHOOK = '/api/v1/platform/billing/paystack/webhook/'
 
 
+def with_paystack_key(test):
+    '''Class-level override_settings is skipped by the tenant test case, so apply it per test.'''
+    override = override_settings(PAYSTACK_SECRET_KEY=SECRET)
+    override.enable()
+    test.addCleanup(override.disable)
+
+
 def subscription_for(hospital, **fields):
     subscription = services.start_trial(hospital)
     for name, value in fields.items():
@@ -149,9 +156,9 @@ class PaymentTests(TenantAPITestCase):
             )
 
 
-@override_settings(PAYSTACK_SECRET_KEY=SECRET)
 class CheckoutTests(TenantAPITestCase):
     def setUp(self):
+        with_paystack_key(self)
         subscription_for(self.tenant)
         self.client.force_authenticate(make_user(Role.ADMIN))
 
@@ -216,9 +223,9 @@ class CheckoutTests(TenantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
 
 
-@override_settings(PAYSTACK_SECRET_KEY=SECRET)
 class WebhookTests(TenantAPITestCase):
     def setUp(self):
+        with_paystack_key(self)
         with schema_context('public'):
             call_command('setup_platform', 'platform.localhost', stdout=StringIO())
         connection.set_tenant(self.tenant)
@@ -241,7 +248,10 @@ class WebhookTests(TenantAPITestCase):
         price = PlanPrice.objects.get(plan='pro', interval='monthly')
         price.paystack_plan_code = 'PLN_pro'
         price.save()
-        event = {'event': 'charge.success', 'data': paid(self.tenant, metadata={}, plan={'plan_code': 'PLN_pro'})}
+        event = {
+            'event': 'charge.success',
+            'data': {**paid(self.tenant, metadata={}), 'plan': {'plan_code': 'PLN_pro'}},
+        }
         self.subscription.paystack_customer_code = 'CUS_1'
         self.subscription.save()
         first, second = self.send(event), self.send(event)
