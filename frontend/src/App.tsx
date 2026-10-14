@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 
 import { Spinner } from '@/components/ui'
@@ -7,24 +7,65 @@ import { useAuth } from '@/lib/auth'
 import { ACCESS } from '@/lib/navigation'
 import type { Role } from '@/lib/roles'
 import { currentHospital } from '@/lib/tenant'
-import { BillingPage } from '@/pages/billing/BillingPage'
-import { ClaimsPage } from '@/pages/billing/ClaimsPage'
-import { InvoicePage } from '@/pages/billing/InvoicePage'
-import { ClaimDocumentPage, ReceiptPage } from '@/pages/billing/PrintPages'
-import { SummaryPage } from '@/pages/billing/SummaryPage'
-import { VisitPage } from '@/pages/clinical/VisitPage'
 import { DashboardPage } from '@/pages/DashboardPage'
-import { AppointmentsPage } from '@/pages/frontdesk/AppointmentsPage'
-import { PatientDetailPage } from '@/pages/frontdesk/PatientDetailPage'
-import { PatientsPage } from '@/pages/frontdesk/PatientsPage'
-import { QueuePage } from '@/pages/frontdesk/QueuePage'
-import { LabCataloguePage } from '@/pages/lab/LabCataloguePage'
-import { LabPage } from '@/pages/lab/LabPage'
-import { LabPrintPage } from '@/pages/lab/LabPrintPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { DrugsPage } from '@/pages/pharmacy/DrugsPage'
-import { PharmacyPage } from '@/pages/pharmacy/PharmacyPage'
 import { NoHospitalPage, NotFoundPage } from '@/pages/StatusPages'
+
+/** Load a screen only when first opened: smaller downloads on slow connections. */
+function page<Module extends Record<string, unknown>>(load: () => Promise<Module>, name: keyof Module) {
+  return lazy(async () => ({ default: (await load())[name] as ComponentType }))
+}
+
+const screens = {
+  queue: page(() => import('@/pages/frontdesk/QueuePage'), 'QueuePage'),
+  appointments: page(() => import('@/pages/frontdesk/AppointmentsPage'), 'AppointmentsPage'),
+  patients: page(() => import('@/pages/frontdesk/PatientsPage'), 'PatientsPage'),
+  patient: page(() => import('@/pages/frontdesk/PatientDetailPage'), 'PatientDetailPage'),
+  visit: page(() => import('@/pages/clinical/VisitPage'), 'VisitPage'),
+  lab: page(() => import('@/pages/lab/LabPage'), 'LabPage'),
+  labTests: page(() => import('@/pages/lab/LabCataloguePage'), 'LabCataloguePage'),
+  labPrint: page(() => import('@/pages/lab/LabPrintPage'), 'LabPrintPage'),
+  pharmacy: page(() => import('@/pages/pharmacy/PharmacyPage'), 'PharmacyPage'),
+  drugs: page(() => import('@/pages/pharmacy/DrugsPage'), 'DrugsPage'),
+  billing: page(() => import('@/pages/billing/BillingPage'), 'BillingPage'),
+  invoice: page(() => import('@/pages/billing/InvoicePage'), 'InvoicePage'),
+  receipt: page(() => import('@/pages/billing/PrintPages'), 'ReceiptPage'),
+  summary: page(() => import('@/pages/billing/SummaryPage'), 'SummaryPage'),
+  claims: page(() => import('@/pages/billing/ClaimsPage'), 'ClaimsPage'),
+  claimDocument: page(() => import('@/pages/billing/PrintPages'), 'ClaimDocumentPage'),
+  reports: page(() => import('@/pages/admin/ReportsPage'), 'ReportsPage'),
+  staff: page(() => import('@/pages/admin/StaffPage'), 'StaffPage'),
+  departments: page(() => import('@/pages/admin/SetupPages'), 'DepartmentsPage'),
+  tariff: page(() => import('@/pages/admin/SetupPages'), 'TariffPage'),
+  insurers: page(() => import('@/pages/admin/SetupPages'), 'InsurersPage'),
+  settings: page(() => import('@/pages/admin/SettingsPage'), 'SettingsPage'),
+}
+
+/** path -> [screen, who may open it] */
+const ROUTES: [string, ComponentType, Role[]][] = [
+  ['queue', screens.queue, ACCESS.queue],
+  ['appointments', screens.appointments, ACCESS.appointments],
+  ['patients', screens.patients, ACCESS.patients],
+  ['patients/:id', screens.patient, ACCESS.patients],
+  ['visits/:id', screens.visit, ACCESS.visits],
+  ['lab', screens.lab, ACCESS.lab],
+  ['lab/tests', screens.labTests, ACCESS.lab],
+  ['lab/orders/:id/print', screens.labPrint, ACCESS.lab],
+  ['pharmacy', screens.pharmacy, ACCESS.pharmacy],
+  ['pharmacy/drugs', screens.drugs, ACCESS.pharmacy],
+  ['billing', screens.billing, ACCESS.billing],
+  ['billing/invoices/:id', screens.invoice, ACCESS.billing],
+  ['billing/payments/:id/receipt', screens.receipt, ACCESS.billing],
+  ['billing/summary', screens.summary, ACCESS.billingOffice],
+  ['insurance/claims', screens.claims, ACCESS.billingOffice],
+  ['insurance/claims/:id/document', screens.claimDocument, ACCESS.billingOffice],
+  ['reports', screens.reports, ACCESS.reports],
+  ['admin/staff', screens.staff, ACCESS.admin],
+  ['admin/departments', screens.departments, ACCESS.admin],
+  ['admin/fees', screens.tariff, ACCESS.admin],
+  ['admin/insurers', screens.insurers, ACCESS.admin],
+  ['admin/settings', screens.settings, ACCESS.admin],
+]
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
@@ -55,134 +96,19 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route
-          path="queue"
-          element={
-            <RequireRole roles={ACCESS.queue}>
-              <QueuePage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="appointments"
-          element={
-            <RequireRole roles={ACCESS.appointments}>
-              <AppointmentsPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="patients"
-          element={
-            <RequireRole roles={ACCESS.patients}>
-              <PatientsPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="patients/:id"
-          element={
-            <RequireRole roles={ACCESS.patients}>
-              <PatientDetailPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="visits/:id"
-          element={
-            <RequireRole roles={ACCESS.visits}>
-              <VisitPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="lab"
-          element={
-            <RequireRole roles={ACCESS.lab}>
-              <LabPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="lab/tests"
-          element={
-            <RequireRole roles={ACCESS.lab}>
-              <LabCataloguePage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="lab/orders/:id/print"
-          element={
-            <RequireRole roles={ACCESS.lab}>
-              <LabPrintPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="pharmacy"
-          element={
-            <RequireRole roles={ACCESS.pharmacy}>
-              <PharmacyPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="pharmacy/drugs"
-          element={
-            <RequireRole roles={ACCESS.pharmacy}>
-              <DrugsPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="billing"
-          element={
-            <RequireRole roles={ACCESS.billing}>
-              <BillingPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="billing/invoices/:id"
-          element={
-            <RequireRole roles={ACCESS.billing}>
-              <InvoicePage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="billing/payments/:id/receipt"
-          element={
-            <RequireRole roles={ACCESS.billing}>
-              <ReceiptPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="billing/summary"
-          element={
-            <RequireRole roles={ACCESS.billingOffice}>
-              <SummaryPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="insurance/claims"
-          element={
-            <RequireRole roles={ACCESS.billingOffice}>
-              <ClaimsPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="insurance/claims/:id/document"
-          element={
-            <RequireRole roles={ACCESS.billingOffice}>
-              <ClaimDocumentPage />
-            </RequireRole>
-          }
-        />
+        {ROUTES.map(([path, Screen, roles]) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <RequireRole roles={roles}>
+                <Suspense fallback={<Spinner />}>
+                  <Screen />
+                </Suspense>
+              </RequireRole>
+            }
+          />
+        ))}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

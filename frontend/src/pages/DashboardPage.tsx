@@ -17,8 +17,11 @@ interface Focus {
 /** What each role works on; becomes live links as the screens are added. */
 const ROLE_FOCUS: Record<Role, Focus[]> = {
   admin: [
-    { icon: Users, title: 'Staff & departments', description: 'Manage accounts and teams' },
-    { icon: Activity, title: 'Reports', description: 'Clinical, financial and stock figures' },
+    { icon: Activity, title: 'Reports', description: 'Clinical, financial and stock figures', to: '/reports' },
+    { icon: Users, title: 'Staff', description: 'Accounts, roles and access', to: '/admin/staff' },
+    { icon: CreditCard, title: 'Fees', description: 'Consultation and card fees', to: '/admin/fees' },
+    { icon: Users, title: 'Patients', description: 'Find or register patients', to: '/patients' },
+    { icon: Activity, title: "Today's queue", description: 'Who is waiting for which doctor', to: '/queue' },
   ],
   receptionist: [
     { icon: Users, title: 'Patients', description: 'Find or register patients', to: '/patients' },

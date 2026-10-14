@@ -60,6 +60,20 @@ npm run build      # type-check + production build into dist/
 - **Sessions:** access tokens refresh automatically, and simultaneous expiries trigger a single refresh. Signing out revokes the refresh token on the server.
 - **Hosting:** `dist/` is static files, so it can be served from any static host or CDN.
 
+**Screens by role** (the sidebar shows only what the role and the hospital's plan allow):
+
+| Role | Screens |
+|---|---|
+| Front desk | Patients (search, register, insurance cover), appointments, today's queue, walk-in visits |
+| Nurse | Queue with triage and vitals, visit workspace |
+| Doctor | Own queue (call in), visit workspace: SOAP notes, ICD-10 diagnoses, prescriptions, lab orders, complete visit |
+| Lab tech | Lab work list (collect, result, complete), walk-in orders, printable report, test prices |
+| Pharmacist | Pharmacy queue and dispensing, drugs and stock |
+| Cashier | Invoices, payments and receipts, insurance claims, daily summary |
+| Admin | All of the above plus reports, staff, departments, fees, insurers and settings |
+
+Each screen loads on first use, which keeps the initial download around 100 KB gzipped. Charts use one series colour, `brand-600`, which clears 3:1 contrast on white; every chart also has a table view.
+
 ## Multi-tenancy
 
 Each hospital is a **tenant** with its own Postgres schema ([django-tenants](https://django-tenants.readthedocs.io/)). Requests are routed by hostname:
