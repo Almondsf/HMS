@@ -23,6 +23,9 @@ def record_consultation(*, doctor_user, visit, prescriptions=(), lab_tests=(), l
     if lab_tests and not has_feature(Feature.LAB):
         raise ValidationError({'lab_tests': "Your hospital's plan doesn't include the Laboratory module."})
 
+    if visit.status == Visit.Status.WAITING:
+        _set_status(visit, Visit.Status.IN_PROGRESS, 'clinical.visit_started')
+
     consultation = Consultation.objects.create(visit=visit, **notes)
 
     for item in prescriptions:
@@ -41,11 +44,48 @@ def record_consultation(*, doctor_user, visit, prescriptions=(), lab_tests=(), l
     return consultation
 
 
-def open_visit(serializer):
-    '''Front desk opens a visit (queues the patient for the doctor).'''
-    visit = serializer.save()
+def open_visit(*, patient, assigned_doctor, reason_for_visit):
+    '''A patient arrives (walk-in or checked-in appointment) and joins the doctor's queue.'''
+    visit = Visit.objects.create(patient=patient, assigned_doctor=assigned_doctor, reason_for_visit=reason_for_visit)
     events.publish('clinical.visit_opened', resource=visit, doctor_id=visit.assigned_doctor_id)
     return visit
+
+
+def _set_status(visit, status, event):
+    visit.status = status
+    visit.save(update_fields=['status', 'updated_at'])
+    events.publish(event, resource=visit)
+    return visit
+
+
+def _require_assigned_doctor(visit, user):
+    if not (user.is_superuser or visit.assigned_doctor.user_id == user.id):
+        raise PermissionDenied("Only the visit's assigned doctor can do this.")
+
+
+@transaction.atomic
+def start_visit(*, visit, by):
+    '''The doctor calls the patient in.'''
+    _require_assigned_doctor(visit, by)
+    if visit.status != Visit.Status.WAITING:
+        raise ValidationError(f'Only waiting visits can be started (this one is {visit.get_status_display()}).')
+    return _set_status(visit, Visit.Status.IN_PROGRESS, 'clinical.visit_started')
+
+
+@transaction.atomic
+def complete_visit(*, visit, by):
+    _require_assigned_doctor(visit, by)
+    if visit.status not in (Visit.Status.WAITING, Visit.Status.IN_PROGRESS):
+        raise ValidationError(f'This visit is already {visit.get_status_display().lower()}.')
+    return _set_status(visit, Visit.Status.COMPLETED, 'clinical.visit_completed')
+
+
+@transaction.atomic
+def cancel_visit(*, visit):
+    '''Front desk removes a patient who left before being seen.'''
+    if visit.status != Visit.Status.WAITING:
+        raise ValidationError('Only visits still waiting can be cancelled.')
+    return _set_status(visit, Visit.Status.CANCELLED, 'clinical.visit_cancelled')
 
 
 def add_prescription(*, consultation, drug=None, medication_name='', **fields):

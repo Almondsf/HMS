@@ -9,9 +9,12 @@ from helpers.models import TrackingModel
 
 class Visit(TrackingModel):
     class Status(models.TextChoices):
-        IN_PROGRESS = 'in_progress', 'In Progress'
+        WAITING = 'waiting', 'Waiting'  # in the doctor's queue
+        IN_PROGRESS = 'in_progress', 'In consultation'
         COMPLETED = 'completed', 'Completed'
         CANCELLED = 'cancelled', 'Cancelled'
+
+    QUEUE_STATUSES = (Status.WAITING, Status.IN_PROGRESS)
 
     patient = models.ForeignKey('profiles.PatientProfile', on_delete=models.PROTECT, related_name='visits')
     assigned_doctor = models.ForeignKey(
@@ -19,7 +22,7 @@ class Visit(TrackingModel):
     )
     visit_date = models.DateTimeField(auto_now_add=True)
     reason_for_visit = models.TextField()
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.IN_PROGRESS, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.WAITING, db_index=True)
 
     def __str__(self):
         return f"Visit of {self.patient} on {self.visit_date:%Y-%m-%d}"

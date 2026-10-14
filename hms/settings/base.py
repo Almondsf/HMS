@@ -58,6 +58,7 @@ TENANT_APPS = [
     'clinical',
     'lab',
     'pharmacy',
+    'scheduling',
 ]
 
 INSTALLED_APPS = SHARED_APPS + [app for app in TENANT_APPS if app not in SHARED_APPS]

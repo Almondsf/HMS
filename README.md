@@ -8,7 +8,8 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 |---|---|
 | `authentication` | Email login with JWT, roles, account lockout, logout, password change, `/me` |
 | `profiles` | Patient registry with medical record numbers, staff directory (doctor, nurse, lab tech, pharmacist, receptionist), departments |
-| `clinical` | Visits, consultations, prescriptions, pharmacy prescription queue |
+| `clinical` | Visits and the patient queue, consultations, prescriptions, pharmacy prescription queue |
+| `scheduling` | Appointments: booking without double-booking, check-in, no-shows |
 | `lab` | Test catalogue, orders (from consultations or walk-in), results |
 | `pharmacy` | Drug stock, dispensing against prescriptions |
 | `audit` | Append-only audit trail, security events, domain events |
@@ -130,6 +131,25 @@ Receptionists see visits without clinical notes. Clinical and dispensing records
   - `GET /api/v1/staff/?role=doctor&department=<id>` lists staff, e.g. for assigning visits.
   - `POST /api/v1/staff/<id>/deactivate/` disables an account and signs it out everywhere. Accounts are never deleted, and an admin can't deactivate their own account.
   - Inactive doctors can't be assigned new visits.
+
+### Appointments and the queue
+
+```
+book appointment ──check-in──▶ visit: waiting ──start──▶ in consultation ──complete──▶ completed
+        │                         │ (walk-ins start here)
+        └─ cancel / no-show       └─ cancel (front desk, before being seen)
+```
+
+- **Booking:** `POST /api/v1/appointments/` takes a patient, doctor, `starts_at` and `duration_minutes`.
+  - A doctor can't be double-booked, and neither can a patient.
+  - Bookings for the same doctor or patient are processed one at a time, so two simultaneous requests can't both take the same slot.
+  - Reschedule with a `PATCH` to `starts_at` or `duration_minutes`.
+- **Check-in:** `POST /api/v1/appointments/<id>/check-in/`, only on the day, opens a visit in the doctor's queue.
+- **Queue:** `GET /api/v1/queue/` shows today's queue. The patient in the room is listed first, then those waiting with `position` and `waiting_minutes`. Doctors see their own queue; others can filter with `?doctor=<id>`.
+- **Visit status** only changes through actions:
+  - `POST /api/v1/visits/<id>/start/` and `/complete/`, by the assigned doctor
+  - `/cancel/`, by the front desk while the patient is still waiting
+  - Recording a consultation starts a waiting visit automatically.
 
 ## API conventions
 

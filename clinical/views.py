@@ -1,4 +1,8 @@
-from rest_framework import viewsets
+from django.db.models import Case, IntegerField, Value, When
+from django.utils import timezone
+from rest_framework import generics, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
@@ -7,10 +11,18 @@ from tenants.features import Feature, requires_feature
 from . import services
 from .filters import ConsultationFilter, PrescriptionFilter, VisitFilter
 from .models import Consultation, Prescription, Visit
-from .serializers import ConsultationSerializer, PrescriptionDetailSerializer, VisitSerializer, VisitSummarySerializer
+from .serializers import (
+    ConsultationSerializer,
+    PrescriptionDetailSerializer,
+    QueueEntrySerializer,
+    VisitSerializer,
+    VisitSummarySerializer,
+)
 
 # Clinical records are never hard-deleted through the API (no DELETE).
 CLINICAL_RECORD_METHODS = ['get', 'post', 'put', 'patch', 'head', 'options']
+
+BASE_VISIT_PERMISSIONS = [requires_feature(Feature.CLINICAL)]
 
 CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'lab_orders__results__labtech__user']
 
@@ -50,7 +62,33 @@ class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         return Visit.objects.none()
 
     def perform_create(self, serializer):
-        services.open_visit(serializer)
+        serializer.instance = services.open_visit(**serializer.validated_data)
+
+    def _transition(self, service, **kwargs):
+        visit = service(visit=self.get_object(), **kwargs)
+        return Response(self.get_serializer(visit).data)
+
+    @action(
+        detail=True, methods=['post'], permission_classes=[*BASE_VISIT_PERMISSIONS, allow_roles(write=[Role.DOCTOR])]
+    )
+    def start(self, request, pk=None):
+        '''Doctor calls the patient in: waiting -> in consultation.'''
+        return self._transition(services.start_visit, by=request.user)
+
+    @action(
+        detail=True, methods=['post'], permission_classes=[*BASE_VISIT_PERMISSIONS, allow_roles(write=[Role.DOCTOR])]
+    )
+    def complete(self, request, pk=None):
+        return self._transition(services.complete_visit, by=request.user)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[*BASE_VISIT_PERMISSIONS, allow_roles(write=[Role.ADMIN, Role.RECEPTIONIST])],
+    )
+    def cancel(self, request, pk=None):
+        '''Front desk: the patient left before being seen.'''
+        return self._transition(services.cancel_visit)
 
     def get_serializer_class(self):
         # Front desk manages visits but doesn't need the clinical notes
@@ -121,3 +159,48 @@ class PrescriptionViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
         elif user.user_type == Role.PATIENT:
             prescriptions = prescriptions.filter(consultation__visit__patient__user=user)
         return prescriptions
+
+
+class QueueView(generics.ListAPIView):
+    '''
+    Today's queue: patients waiting or in consultation, in order of arrival.
+    Doctors see their own queue; front desk and nurses can filter ?doctor=<id>.
+    '''
+
+    serializer_class = QueueEntrySerializer
+    pagination_class = None
+    filter_backends = []
+    permission_classes = [
+        requires_feature(Feature.CLINICAL),
+        allow_roles(read=[Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST, Role.ADMIN]),
+    ]
+
+    def get_queryset(self):
+        visits = Visit.objects.filter(
+            status__in=Visit.QUEUE_STATUSES, visit_date__date=timezone.localdate()
+        ).select_related('patient__user', 'assigned_doctor__user', 'appointment')
+        user = self.request.user
+        if user.user_type == Role.DOCTOR:
+            visits = visits.filter(assigned_doctor__user=user)
+        elif 'doctor' in self.request.query_params:
+            visits = visits.filter(assigned_doctor=self.request.query_params['doctor'])
+        # Patients already with the doctor first, then the waiting line by arrival
+        in_room_first = Case(
+            When(status=Visit.Status.IN_PROGRESS, then=Value(0)), default=Value(1), output_field=IntegerField()
+        )
+        return visits.order_by(in_room_first, 'visit_date')
+
+    def list(self, request, *args, **kwargs):
+        visits = list(self.get_queryset())
+        position = 0
+        for visit in visits:
+            # Position counts only those still waiting; whoever is in the room has none
+            if visit.status == Visit.Status.WAITING:
+                position += 1
+                visit.position = position
+            else:
+                visit.position = None
+        serializer = self.get_serializer(
+            visits, many=True, context={**self.get_serializer_context(), 'now': timezone.now()}
+        )
+        return Response(serializer.data)

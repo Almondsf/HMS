@@ -110,6 +110,7 @@ class VisitSerializer(VisitValidation, serializers.ModelSerializer):
     class Meta:
         model = Visit
         fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status', 'consultations']
+        read_only_fields = ['status']  # changes via the start / complete / cancel actions
 
 
 class VisitSummarySerializer(VisitValidation, serializers.ModelSerializer):
@@ -118,3 +119,34 @@ class VisitSummarySerializer(VisitValidation, serializers.ModelSerializer):
     class Meta:
         model = Visit
         fields = ['id', 'patient', 'assigned_doctor', 'visit_date', 'reason_for_visit', 'status']
+        read_only_fields = ['status']
+
+
+class QueueEntrySerializer(serializers.ModelSerializer):
+    '''A patient in a doctor's queue (no clinical notes).'''
+
+    position = serializers.IntegerField(read_only=True)
+    waiting_minutes = serializers.SerializerMethodField()
+    patient = serializers.SerializerMethodField()
+    doctor = serializers.SerializerMethodField()
+    appointment_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Visit
+        fields = [
+            'id', 'position', 'status', 'patient', 'doctor', 'reason_for_visit',
+            'visit_date', 'waiting_minutes', 'appointment_time',
+        ]  # fmt: skip
+
+    def get_waiting_minutes(self, visit):
+        return int((self.context['now'] - visit.visit_date).total_seconds() // 60)
+
+    def get_patient(self, visit):
+        return {'id': visit.patient_id, 'mrn': visit.patient.mrn, 'name': visit.patient.user.get_full_name()}
+
+    def get_doctor(self, visit):
+        return {'id': visit.assigned_doctor_id, 'name': visit.assigned_doctor.user.get_full_name()}
+
+    def get_appointment_time(self, visit):
+        appointment = getattr(visit, 'appointment', None)
+        return appointment.starts_at if appointment else None

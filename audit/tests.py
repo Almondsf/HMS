@@ -50,10 +50,10 @@ class ChangeTrackingTests(TenantAPITestCase):
 
     def test_update_records_only_changed_fields(self):
         visit_id = self.open_visit().data['id']
-        self.client.patch(f'/api/v1/visits/{visit_id}/', {'status': 'completed'})
+        self.client.patch(f'/api/v1/visits/{visit_id}/', {'reason_for_visit': 'Cough and fever'})
 
         event = AuditEvent.objects.get(action='update', resource_type='clinical.visit')
-        self.assertEqual(event.changes, {'status': ['in_progress', 'completed']})
+        self.assertEqual(event.changes, {'reason_for_visit': ['Cough', 'Cough and fever']})
 
     def test_unchanged_save_is_not_recorded(self):
         visit = Visit.objects.get(pk=self.open_visit().data['id'])
