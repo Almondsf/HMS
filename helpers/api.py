@@ -3,7 +3,9 @@
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import ProtectedError
+from django.http import JsonResponse
 from rest_framework import exceptions, serializers, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
@@ -41,3 +43,22 @@ def _record_denied(exc, context):
             'detail': str(exc),
         },
     )
+
+
+class StandardPagination(PageNumberPagination):
+    '''?page=N, and ?page_size=N up to 100.'''
+
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+def not_found(request, exception=None):
+    '''JSON 404 for unknown URLs (Django's default is an HTML page).'''
+    return JsonResponse({'detail': 'Not found.'}, status=404)
+
+
+def server_error(request):
+    '''JSON 500 carrying the request id, so support can find the logs.'''
+    from audit.context import current_request_id
+
+    return JsonResponse({'detail': 'Something went wrong on our side.', 'request_id': current_request_id()}, status=500)

@@ -21,11 +21,11 @@ class LabWorkflowTests(TenantAPITestCase):
 
     def place_order(self, user, **data):
         self.client.force_authenticate(user)
-        return self.client.post('/api/lab/test-orders/', data, format='json')
+        return self.client.post('/api/v1/lab/test-orders/', data, format='json')
 
     def record(self, result, **data):
         self.client.force_authenticate(self.labtech)
-        return self.client.patch(f'/api/lab/test-results/{result.id}/', data, format='json')
+        return self.client.patch(f'/api/v1/lab/test-results/{result.id}/', data, format='json')
 
     def test_doctor_orders_tests_from_consultation(self):
         response = self.place_order(self.doctor, consultation=self.consultation.id, tests=[self.fbc.id, self.mp.id])
@@ -82,9 +82,9 @@ class LabWorkflowTests(TenantAPITestCase):
     def test_doctor_sees_only_own_patients_results(self):
         self.place_order(self.doctor, consultation=self.consultation.id, tests=[self.fbc.id])
         self.client.force_authenticate(make_user(Role.DOCTOR))
-        self.assertEqual(self.client.get('/api/lab/test-results/').data['count'], 0)
+        self.assertEqual(self.client.get('/api/v1/lab/test-results/').data['count'], 0)
         self.client.force_authenticate(self.doctor)
-        self.assertEqual(self.client.get('/api/lab/test-results/').data['count'], 1)
+        self.assertEqual(self.client.get('/api/v1/lab/test-results/').data['count'], 1)
 
 
 class LegacyLabOrderMigrationTests(TransactionTestCase):

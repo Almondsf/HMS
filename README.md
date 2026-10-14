@@ -38,7 +38,7 @@ python manage.py runserver
 
 `create_hospital` prints a one-time password for the hospital's admin. The hospital is then live at **http://demo.localhost:8000**: API docs at `/api/docs/`, admin at `/admin/`. Browsers and curl resolve `*.localhost` to your machine.
 
-The hospital admin creates staff through `/api/create-profile/<role>/`. Patients are registered by an admin or receptionist.
+The hospital admin creates staff through `/api/v1/create-profile/<role>/`. Patients are registered by an admin or receptionist.
 
 ## Multi-tenancy
 
@@ -66,11 +66,11 @@ Each hospital is a **tenant** with its own Postgres schema ([django-tenants](htt
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/platform/hospitals/` | Provision a hospital. Takes `name`, `schema_name`, `plan` and `admin_*` fields; returns the admin's one-time password if none was given |
-| `GET /api/platform/hospitals/` | List hospitals with their domains, plans and status |
-| `PATCH /api/platform/hospitals/<id>/` | Change plan or settings; `is_active: false` suspends the hospital |
+| `POST /api/v1/platform/hospitals/` | Provision a hospital. Takes `name`, `schema_name`, `plan` and `admin_*` fields; returns the admin's one-time password if none was given |
+| `GET /api/v1/platform/hospitals/` | List hospitals with their domains, plans and status |
+| `PATCH /api/v1/platform/hospitals/<id>/` | Change plan or settings; `is_active: false` suspends the hospital |
 
-**Hospital settings:** `GET/PATCH /api/hospital/` on the hospital's own site. Everyone signed in can read them; admins edit:
+**Hospital settings:** `GET/PATCH /api/v1/hospital/` on the hospital's own site. Everyone signed in can read them; admins edit:
 - `name`, `contact_email`, `phone`, `address`
 - `timezone`: API timestamps are shown in it
 - `currency`
@@ -102,10 +102,10 @@ Within a hospital, access is enforced on every endpoint with `authentication.per
 
 | Resource | Read | Write |
 |---|---|---|
-| Patients (`/api/patients/`) | doctor, nurse, lab tech, pharmacist · patient: own | admin, receptionist |
-| Staff directory (`/api/staff/`) | all staff | admin (deactivate / activate) |
+| Patients (`/api/v1/patients/`) | doctor, nurse, lab tech, pharmacist · patient: own | admin, receptionist |
+| Staff directory (`/api/v1/staff/`) | all staff | admin (deactivate / activate) |
 | Departments | all staff | admin |
-| Register staff (`/api/create-profile/<role>/`) | | admin |
+| Register staff (`/api/v1/create-profile/<role>/`) | | admin |
 | Visits | admin, receptionist, nurse: all · doctor, patient: own | admin, receptionist |
 | Consultations | admin · doctor, patient: own | assigned doctor |
 | Prescriptions queue | pharmacist, admin · doctor, patient: own | (created with consultations) |
@@ -125,11 +125,27 @@ Receptionists see visits without clinical notes. Clinical and dispensing records
   - To keep a patient's existing paper record number, send it as `mrn`; generated numbers skip it.
   - An MRN never changes.
 - **Patients without email or password:** a patient can be registered with neither (they simply can't sign in). Staff always need both.
-- **Search:** `GET /api/patients/?search=ada obi` matches every word against name, MRN, phone and email.
+- **Search:** `GET /api/v1/patients/?search=ada obi` matches every word against name, MRN, phone and email.
 - **Staff:**
-  - `GET /api/staff/?role=doctor&department=<id>` lists staff, e.g. for assigning visits.
-  - `POST /api/staff/<id>/deactivate/` disables an account and signs it out everywhere. Accounts are never deleted, and an admin can't deactivate their own account.
+  - `GET /api/v1/staff/?role=doctor&department=<id>` lists staff, e.g. for assigning visits.
+  - `POST /api/v1/staff/<id>/deactivate/` disables an account and signs it out everywhere. Accounts are never deleted, and an admin can't deactivate their own account.
   - Inactive doctors can't be assigned new visits.
+
+## API conventions
+
+- **Versioned:** every endpoint lives under `/api/v1/`.
+  - Older `/api/...` paths still work, but their responses carry `Deprecation: true` and a `Link` header pointing to the `/api/v1/` address.
+  - Breaking changes will go to `/api/v2/`.
+- **Docs and health** are not versioned: `/api/docs/`, `/api/redoc/`, `/api/schema.json` and `/api/health/`.
+- **Pagination:** `?page=N`. `?page_size=N` sets the page size, up to 100.
+- **Filtering and sorting:** query parameters, e.g. `/api/v1/visits/?status=in_progress&date_from=2026-10-01&ordering=-visit_date`. Each endpoint's filters are listed in the API docs. Some useful ones:
+  - `/api/v1/prescriptions/?pending=true`: the pharmacy's queue
+  - `/api/v1/pharmacy/drugs/?low_stock=true`
+  - `/api/v1/lab/test-orders/?status=pending`
+- **Errors are always JSON:**
+  - validation: `{"field": ["message"]}`
+  - other errors: `{"detail": "message"}`
+  - server errors also include a `request_id` to quote to support
 
 ## Architecture
 
@@ -147,7 +163,7 @@ request → view (permissions, scoping) → serializer (input shape) → service
 Every change to a registered model (via the API, admin or shell), every read of patient data, and every security event is written to `audit.AuditEvent`. Each event stores the actor, role, resource, patient, field-level changes, IP, user agent and request id.
 
 - **Append-only:** updates and deletes are refused by the model and by a Postgres trigger.
-- **Find everyone who accessed a patient:** `GET /api/audit/events/?patient=<id>`. Other filters: `category`, `action`, `actor_id`, `resource_type`, `resource_id`, `request_id`, `since`, `until`.
+- **Find everyone who accessed a patient:** `GET /api/v1/audit/events/?patient=<id>`. Other filters: `category`, `action`, `actor_id`, `resource_type`, `resource_id`, `request_id`, `since`, `until`.
 - **Registering a model:** done in its app's `AppConfig.ready()`:
   ```python
   registry.register(Visit, patient=lambda visit: visit.patient_id)

@@ -4,11 +4,16 @@ from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
 from tenants.features import Feature, requires_feature
 
+from .filters import DispenseTransactionFilter, DrugFilter
 from .models import DispenseTransaction, Drug
 from .serializers import DispenseTransactionSerializer, DrugSerializer
 
 
 class DrugViewSet(viewsets.ModelViewSet):
+    '''Filters: name (partial), low_stock=true.'''
+
+    filterset_class = DrugFilter
+    ordering_fields = ['name', 'quantity_in_stock']
     serializer_class = DrugSerializer
     queryset = Drug.objects.order_by('name')
     permission_classes = [
@@ -21,8 +26,10 @@ class DrugViewSet(viewsets.ModelViewSet):
 
 
 class DispenseTransactionViewSet(AuditedReadMixin, viewsets.ModelViewSet):
-    '''Stock rules live in pharmacy.services.dispense.'''
+    '''Stock rules live in pharmacy.services.dispense. Filters: pharmacist, date_from, date_to.'''
 
+    filterset_class = DispenseTransactionFilter
+    ordering_fields = ['dispensed_at']
     serializer_class = DispenseTransactionSerializer
     queryset = (
         DispenseTransaction.objects.select_related('pharmacist__user')

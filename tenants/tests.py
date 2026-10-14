@@ -45,7 +45,7 @@ class TwoHospitalsTestCase(TenantAPITestCase):
 
 class IsolationTests(TwoHospitalsTestCase):
     def login(self, client, user):
-        return client.post('/api/auth/login/', {'email': user.email, 'password': TEST_PASSWORD}).data
+        return client.post('/api/v1/auth/login/', {'email': user.email, 'password': TEST_PASSWORD}).data
 
     def test_records_are_invisible_to_other_hospitals(self):
         make_consultation()
@@ -56,7 +56,7 @@ class IsolationTests(TwoHospitalsTestCase):
             other_admin = make_user(Role.ADMIN)
         other = client_for(OTHER_DOMAIN)
         other.force_authenticate(other_admin)
-        self.assertEqual(other.get('/api/visits/').data['count'], 0)
+        self.assertEqual(other.get('/api/v1/visits/').data['count'], 0)
 
     def test_token_is_rejected_at_another_hospital_even_for_same_user_id(self):
         doctor = make_user(Role.DOCTOR)
@@ -70,23 +70,23 @@ class IsolationTests(TwoHospitalsTestCase):
 
         other = client_for(OTHER_DOMAIN)
         other.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
-        self.assertEqual(other.get('/api/auth/me/').status_code, status.HTTP_401_UNAUTHORIZED)
-        refresh = other.post('/api/auth/token/refresh/', {'refresh': tokens['refresh']})
+        self.assertEqual(other.get('/api/v1/auth/me/').status_code, status.HTTP_401_UNAUTHORIZED)
+        refresh = other.post('/api/v1/auth/token/refresh/', {'refresh': tokens['refresh']})
         self.assertEqual(refresh.status_code, status.HTTP_401_UNAUTHORIZED)
 
         # Still valid where it was issued
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
-        self.assertEqual(self.client.get('/api/auth/me/').data['email'], doctor.email)
+        self.assertEqual(self.client.get('/api/v1/auth/me/').data['email'], doctor.email)
 
     def test_suspended_hospital_is_refused(self):
         with schema_context('public'):
             Hospital.objects.filter(pk=self.other.pk).update(is_active=False)
-        response = client_for(OTHER_DOMAIN).get('/api/visits/')
+        response = client_for(OTHER_DOMAIN).get('/api/v1/visits/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn('suspended', response.json()['detail'])
 
     def test_unknown_address_is_not_found(self):
-        response = client_for('nowhere.localhost').get('/api/visits/')
+        response = client_for('nowhere.localhost').get('/api/v1/visits/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_health_check_answers_on_any_host(self):
@@ -110,12 +110,12 @@ class PlatformSiteTests(TenantAPITestCase):
 
     def test_platform_has_no_hospital_endpoints(self):
         self.platform.force_authenticate(self.operator)
-        self.assertEqual(self.platform.get('/api/visits/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.platform.get('/api/v1/visits/').status_code, status.HTTP_404_NOT_FOUND)
 
     def test_platform_token_is_not_valid_at_hospitals(self):
-        tokens = self.platform.post('/api/auth/login/', {'email': 'ops@example.com', 'password': TEST_PASSWORD}).data
+        tokens = self.platform.post('/api/v1/auth/login/', {'email': 'ops@example.com', 'password': TEST_PASSWORD}).data
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
-        self.assertEqual(self.client.get('/api/auth/me/').status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.client.get('/api/v1/auth/me/').status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class ProvisioningTests(TestCase):
@@ -137,11 +137,11 @@ class ProvisioningTests(TestCase):
         self.assertTrue(AuditEvent.objects.filter(action='platform.hospital_provisioned').exists())
 
         client = client_for('stlukes.localhost')
-        response = client.post('/api/auth/login/', {'email': admin.email, 'password': 'Adm1n-pass-strong'})
+        response = client.post('/api/v1/auth/login/', {'email': admin.email, 'password': 'Adm1n-pass-strong'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['user']['user_type'], 'admin')
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
-        self.assertEqual(client.get('/api/visits/').status_code, status.HTTP_200_OK)
+        self.assertEqual(client.get('/api/v1/visits/').status_code, status.HTTP_200_OK)
 
     def test_invalid_requests_create_nothing(self):
         for overrides in [{'schema_name': 'Bad Name!'}, {'schema_name': 'public'}, {'admin_password': '123'}]:
@@ -185,7 +185,7 @@ class CopyHospitalDataTests(TenantAPITestCase):
 class PlatformHospitalApiTests(PlatformSiteTests):
     def test_operator_provisions_a_hospital(self):
         self.platform.force_authenticate(self.operator)
-        response = self.platform.post('/api/platform/hospitals/', {
+        response = self.platform.post('/api/v1/platform/hospitals/', {
             'name': 'Mercy Clinic', 'schema_name': 'mercy', 'plan': 'pro',
             'admin_email': 'admin@mercy.example', 'admin_first_name': 'Mary', 'admin_last_name': 'Admin',
         })  # fmt: skip
@@ -196,19 +196,19 @@ class PlatformHospitalApiTests(PlatformSiteTests):
         password = response.data['admin']['temporary_password']
 
         login = client_for('mercy.localhost').post(
-            '/api/auth/login/', {'email': 'admin@mercy.example', 'password': password}
+            '/api/v1/auth/login/', {'email': 'admin@mercy.example', 'password': password}
         )
         self.assertEqual(login.status_code, status.HTTP_200_OK)
 
     def test_operator_suspends_a_hospital(self):
         self.platform.force_authenticate(self.operator)
-        response = self.platform.patch(f'/api/platform/hospitals/{self.tenant.pk}/', {'is_active': False})
+        response = self.platform.patch(f'/api/v1/platform/hospitals/{self.tenant.pk}/', {'is_active': False})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.client.get('/api/visits/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.get('/api/v1/visits/').status_code, status.HTTP_403_FORBIDDEN)
 
     def test_list_excludes_the_platform_itself(self):
         self.platform.force_authenticate(self.operator)
-        schemas = [h['schema_name'] for h in self.platform.get('/api/platform/hospitals/').data['results']]
+        schemas = [h['schema_name'] for h in self.platform.get('/api/v1/platform/hospitals/').data['results']]
         self.assertIn(self.tenant.schema_name, schemas)
         self.assertNotIn('public', schemas)
 
@@ -216,49 +216,49 @@ class PlatformHospitalApiTests(PlatformSiteTests):
         with schema_context('public'):
             staff = make_user(Role.ADMIN)  # a platform account without superuser rights
         self.platform.force_authenticate(staff)
-        self.assertEqual(self.platform.get('/api/platform/hospitals/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.platform.get('/api/v1/platform/hospitals/').status_code, status.HTTP_403_FORBIDDEN)
 
         # Hospital admins don't even see the platform API on their own site
         self.client.force_authenticate(make_user(Role.ADMIN))
-        self.assertEqual(self.client.get('/api/platform/hospitals/').status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.client.get('/api/v1/platform/hospitals/').status_code, status.HTTP_404_NOT_FOUND)
 
 
 class HospitalSettingsTests(TenantAPITestCase):
     def test_staff_read_and_admins_edit_settings(self):
         self.client.force_authenticate(make_user(Role.DOCTOR))
-        response = self.client.get('/api/hospital/')
+        response = self.client.get('/api/v1/hospital/')
         self.assertEqual(response.data['name'], 'Test Hospital')
         self.assertEqual(response.data['domain'], 'test-hospital.localhost')
-        self.assertEqual(self.client.patch('/api/hospital/', {'phone': '0800'}).status_code, 403)
+        self.assertEqual(self.client.patch('/api/v1/hospital/', {'phone': '0800'}).status_code, 403)
 
         self.client.force_authenticate(make_user(Role.ADMIN))
-        response = self.client.patch('/api/hospital/', {'phone': '+2348000000000', 'mrn_prefix': 'SLH'})
+        response = self.client.patch('/api/v1/hospital/', {'phone': '+2348000000000', 'mrn_prefix': 'SLH'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['mrn_prefix'], 'SLH')
         self.assertTrue(AuditEvent.objects.filter(resource_type='tenants.hospital', action='update').exists())
 
     def test_admins_cannot_change_their_own_plan(self):
         self.client.force_authenticate(make_user(Role.ADMIN))
-        self.client.patch('/api/hospital/', {'plan': 'enterprise', 'name': 'Renamed'})
+        self.client.patch('/api/v1/hospital/', {'plan': 'enterprise', 'name': 'Renamed'})
         with schema_context('public'):
             hospital = Hospital.objects.get(pk=self.tenant.pk)
         self.assertEqual((hospital.plan, hospital.name), ('enterprise', 'Renamed'))  # test hospital is enterprise
 
         Hospital.objects.filter(pk=self.tenant.pk).update(plan='basic')
-        self.client.patch('/api/hospital/', {'plan': 'enterprise'})
+        self.client.patch('/api/v1/hospital/', {'plan': 'enterprise'})
         self.assertEqual(Hospital.objects.get(pk=self.tenant.pk).plan, 'basic')
 
     def test_invalid_settings_are_rejected(self):
         self.client.force_authenticate(make_user(Role.ADMIN))
         for field, value in [('timezone', 'Mars/Olympus'), ('currency', 'naira'), ('mrn_prefix', 'bad prefix')]:
             with self.subTest(field=field):
-                self.assertEqual(self.client.patch('/api/hospital/', {field: value}).status_code, 400)
+                self.assertEqual(self.client.patch('/api/v1/hospital/', {field: value}).status_code, 400)
 
     def test_times_are_shown_in_the_hospitals_timezone(self):
         Hospital.objects.filter(pk=self.tenant.pk).update(timezone='Africa/Nairobi')
         consultation = make_consultation()
         self.client.force_authenticate(consultation.visit.assigned_doctor.user)
-        visit = self.client.get(f'/api/visits/{consultation.visit_id}/').data
+        visit = self.client.get(f'/api/v1/visits/{consultation.visit_id}/').data
         self.assertTrue(visit['visit_date'].endswith('+03:00'), visit['visit_date'])
 
 
@@ -268,19 +268,19 @@ class PlanFeatureTests(TenantAPITestCase):
 
     def test_basic_plan_has_no_lab(self):
         self.client.force_authenticate(make_user(Role.LAB_TECHNICIAN))
-        response = self.client.get('/api/lab/tests/')
+        response = self.client.get('/api/v1/lab/tests/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn('Laboratory', str(response.data['detail']))
 
         self.client.force_authenticate(make_user(Role.PHARMACIST))
-        self.assertEqual(self.client.get('/api/pharmacy/drugs/').status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get('/api/v1/pharmacy/drugs/').status_code, status.HTTP_200_OK)
 
     def test_consultation_cannot_order_lab_tests_without_lab(self):
         consultation = make_consultation()
         test = LabTest.objects.create(name='FBC', cost=100)
         self.client.force_authenticate(consultation.visit.assigned_doctor.user)
         response = self.client.post(
-            '/api/consultations/', {'visit': consultation.visit_id, 'lab_tests': [test.id]}, format='json'
+            '/api/v1/consultations/', {'visit': consultation.visit_id, 'lab_tests': [test.id]}, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('lab_tests', response.data)

@@ -5,6 +5,7 @@ from audit.mixins import AuditedReadMixin
 from authentication.permissions import STAFF_ROLES, Role, allow_roles
 from tenants.features import Feature, requires_feature
 
+from .filters import TestOrderFilter, TestResultFilter
 from .models import LabTest, TestOrder, TestResult
 from .serializers import LabTestSerializer, TestOrderSerializer, TestResultSerializer
 
@@ -19,6 +20,8 @@ class LabTestViewSet(viewsets.ModelViewSet):
 
     queryset = LabTest.objects.all()
     serializer_class = LabTestSerializer
+    filterset_fields = ['is_active']
+    ordering_fields = ['name', 'cost']
     permission_classes = [
         requires_feature(Feature.LAB),
         allow_roles(read=STAFF_ROLES, write=[Role.ADMIN, Role.LAB_TECHNICIAN]),
@@ -27,6 +30,10 @@ class LabTestViewSet(viewsets.ModelViewSet):
 
 
 class TestOrderViewSet(AuditedReadMixin, viewsets.ModelViewSet):
+    '''Filters: status, patient, consultation, date_from, date_to.'''
+
+    filterset_class = TestOrderFilter
+    ordering_fields = ['ordered_at', 'status']
     serializer_class = TestOrderSerializer
     permission_classes = [
         requires_feature(Feature.LAB),
@@ -45,8 +52,10 @@ class TestOrderViewSet(AuditedReadMixin, viewsets.ModelViewSet):
 
 
 class TestResultViewSet(AuditedReadMixin, viewsets.ModelViewSet):
-    '''Results are created with their order; the lab fills them in with PATCH.'''
+    '''Results are created with their order; the lab fills them in with PATCH. Filters: status, order, test, patient.'''
 
+    filterset_class = TestResultFilter
+    ordering_fields = ['completed_at', 'status']
     serializer_class = TestResultSerializer
     permission_classes = [
         requires_feature(Feature.LAB),

@@ -35,16 +35,16 @@ class ClinicalAccessTests(TenantAPITestCase):
 
     def test_doctor_sees_only_own_visits_and_consultations(self):
         self.client.force_authenticate(self.doctor)
-        self.assertEqual(self.ids(self.client.get('/api/visits/')), {self.my_visit.id})
-        self.assertEqual(self.ids(self.client.get('/api/consultations/')), {self.my_consultation.id})
+        self.assertEqual(self.ids(self.client.get('/api/v1/visits/')), {self.my_visit.id})
+        self.assertEqual(self.ids(self.client.get('/api/v1/consultations/')), {self.my_consultation.id})
 
     def test_patient_sees_only_own_records_and_cannot_write(self):
         self.client.force_authenticate(self.patient)
-        self.assertEqual(self.ids(self.client.get('/api/visits/')), {self.my_visit.id})
-        self.assertEqual(self.ids(self.client.get('/api/consultations/')), {self.my_consultation.id})
+        self.assertEqual(self.ids(self.client.get('/api/v1/visits/')), {self.my_visit.id})
+        self.assertEqual(self.ids(self.client.get('/api/v1/consultations/')), {self.my_consultation.id})
 
         response = self.client.post(
-            '/api/visits/',
+            '/api/v1/visits/',
             {
                 'patient': self.patient.patientprofile.id,
                 'assigned_doctor': self.doctor.doctorprofile.id,
@@ -55,26 +55,26 @@ class ClinicalAccessTests(TenantAPITestCase):
 
     def test_receptionist_does_not_see_clinical_notes(self):
         self.client.force_authenticate(self.receptionist)
-        response = self.client.get(f'/api/visits/{self.my_visit.id}/')
+        response = self.client.get(f'/api/v1/visits/{self.my_visit.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn('consultations', response.data)
 
     def test_visits_cannot_be_deleted(self):
         self.client.force_authenticate(self.receptionist)
-        response = self.client.delete(f'/api/visits/{self.my_visit.id}/')
+        response = self.client.delete(f'/api/v1/visits/{self.my_visit.id}/')
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_doctor_cannot_consult_on_another_doctors_visit(self):
         self.client.force_authenticate(self.doctor)
         response = self.client.post(
-            '/api/consultations/', {'visit': self.other_visit.id, 'assessment': 'x'}, format='json'
+            '/api/v1/consultations/', {'visit': self.other_visit.id, 'assessment': 'x'}, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_doctor_cannot_move_consultation_to_another_doctors_visit(self):
         self.client.force_authenticate(self.doctor)
         response = self.client.patch(
-            f'/api/consultations/{self.my_consultation.id}/', {'visit': self.other_visit.id}, format='json'
+            f'/api/v1/consultations/{self.my_consultation.id}/', {'visit': self.other_visit.id}, format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.my_consultation.refresh_from_db()
@@ -96,7 +96,7 @@ class ConsultationWorkflowTests(TenantAPITestCase):
 
     def test_consultation_creates_prescriptions_and_lab_order(self):
         response = self.client.post(
-            '/api/consultations/',
+            '/api/v1/consultations/',
             {
                 'visit': self.visit.id,
                 'assessment': 'Suspected malaria',
@@ -123,7 +123,7 @@ class ConsultationWorkflowTests(TenantAPITestCase):
 
     def test_prescription_needs_drug_or_name(self):
         response = self.client.post(
-            '/api/consultations/',
+            '/api/v1/consultations/',
             {
                 'visit': self.visit.id,
                 'prescriptions': [{'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
@@ -136,7 +136,7 @@ class ConsultationWorkflowTests(TenantAPITestCase):
     def test_prescriptions_cannot_be_added_on_update(self):
         consultation = Consultation.objects.create(visit=self.visit)
         response = self.client.patch(
-            f'/api/consultations/{consultation.id}/',
+            f'/api/v1/consultations/{consultation.id}/',
             {
                 'prescriptions': [{'medication_name': 'X', 'dosage': '1', 'frequency': 'OD', 'duration': '1 day'}],
             },
@@ -156,7 +156,7 @@ class ConsultationWorkflowTests(TenantAPITestCase):
         )
         self.client.force_authenticate(make_user(Role.PHARMACIST))
 
-        response = self.client.get(f'/api/prescriptions/?patient={self.patient.patientprofile.id}')
+        response = self.client.get(f'/api/v1/prescriptions/?patient={self.patient.patientprofile.id}')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         [item] = response.data['results']

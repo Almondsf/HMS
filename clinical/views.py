@@ -5,6 +5,7 @@ from authentication.permissions import Role, allow_roles
 from tenants.features import Feature, requires_feature
 
 from . import services
+from .filters import ConsultationFilter, PrescriptionFilter, VisitFilter
 from .models import Consultation, Prescription, Visit
 from .serializers import ConsultationSerializer, PrescriptionDetailSerializer, VisitSerializer, VisitSummarySerializer
 
@@ -15,6 +16,10 @@ CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'la
 
 
 class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
+    '''Filters: status, patient, assigned_doctor, date_from, date_to. Sort with ?ordering=-visit_date.'''
+
+    filterset_class = VisitFilter
+    ordering_fields = ['visit_date', 'status']
     permission_classes = [
         requires_feature(Feature.CLINICAL),
         allow_roles(
@@ -56,8 +61,13 @@ class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
 
 
 class ConsultationViewSet(AuditedReadMixin, viewsets.ModelViewSet):
-    '''Creation rules (assigned doctor only) live in clinical.services.record_consultation.'''
+    '''
+    Creation rules (assigned doctor only) live in clinical.services.record_consultation.
+    Filters: visit, patient, date_from, date_to.
+    '''
 
+    filterset_class = ConsultationFilter
+    ordering_fields = ['created_at', 'follow_up_date']
     serializer_class = ConsultationSerializer
     permission_classes = [
         requires_feature(Feature.CLINICAL),
@@ -89,9 +99,11 @@ class ConsultationViewSet(AuditedReadMixin, viewsets.ModelViewSet):
 class PrescriptionViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
     '''
     Prescriptions across consultations: the pharmacy's work queue.
-    Filter with ?patient=<patient profile id> or ?consultation=<id>.
+    Filters: patient, consultation, drug, pending=true (units still to dispense).
     '''
 
+    filterset_class = PrescriptionFilter
+    ordering_fields = ['created_at']
     serializer_class = PrescriptionDetailSerializer
     permission_classes = [
         requires_feature(Feature.CLINICAL),
@@ -108,10 +120,4 @@ class PrescriptionViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
             prescriptions = prescriptions.filter(consultation__visit__assigned_doctor__user=user)
         elif user.user_type == Role.PATIENT:
             prescriptions = prescriptions.filter(consultation__visit__patient__user=user)
-
-        params = self.request.query_params
-        if 'patient' in params:
-            prescriptions = prescriptions.filter(consultation__visit__patient_id=params['patient'])
-        if 'consultation' in params:
-            prescriptions = prescriptions.filter(consultation_id=params['consultation'])
         return prescriptions

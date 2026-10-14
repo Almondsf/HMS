@@ -23,17 +23,20 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
-    path('api/auth/', include('authentication.urls')),
-    path('api/hospital/', HospitalSettingsView.as_view(), name='hospital-settings'),
-    path('api/create-profile/', include('profiles.urls')),
-    path('api/', include('clinical.urls')),
-    path('api/', include('profiles.directory_urls')),
-    path('api/pharmacy/', include('pharmacy.urls')),
-    path('api/lab/', include('lab.urls')),
-    path('api/audit/', include('audit.urls')),
+    path('api/v1/auth/', include('authentication.urls')),
+    path('api/v1/hospital/', HospitalSettingsView.as_view(), name='hospital-settings'),
+    path('api/v1/create-profile/', include('profiles.urls')),
+    path('api/v1/', include('clinical.urls')),
+    path('api/v1/', include('profiles.directory_urls')),
+    path('api/v1/pharmacy/', include('pharmacy.urls')),
+    path('api/v1/lab/', include('lab.urls')),
+    path('api/v1/audit/', include('audit.urls')),
     # API docs
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     re_path(r'^api/schema\.(?P<format>json|yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('', RedirectView.as_view(pattern_name='schema-swagger-ui', permanent=False)),
 ]
+
+handler404 = 'helpers.api.not_found'
+handler500 = 'helpers.api.server_error'

@@ -4,6 +4,7 @@ asgiref==3.10.0
 cffi==2.1.1
 Django==5.2.18
 django-cors-headers==4.9.0
+django-filter==26.2
 djangorestframework_simplejwt==5.5.1
 djangorestframework==3.17.2
 django-tenants==4.0.0

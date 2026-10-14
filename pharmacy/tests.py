@@ -17,28 +17,32 @@ class DepartmentAccessTests(TenantAPITestCase):
 
     def test_patient_cannot_read_lab_or_pharmacy_data(self):
         for url in [
-            '/api/lab/test-results/',
-            '/api/lab/test-orders/',
-            '/api/pharmacy/drugs/',
-            '/api/pharmacy/dispense-transactions/',
+            '/api/v1/lab/test-results/',
+            '/api/v1/lab/test-orders/',
+            '/api/v1/pharmacy/drugs/',
+            '/api/v1/pharmacy/dispense-transactions/',
         ]:
             with self.subTest(url=url):
                 self.assertEqual(self.status_for(Role.PATIENT, 'get', url), status.HTTP_403_FORBIDDEN)
 
     def test_drug_stock_is_managed_by_pharmacy(self):
         drug = {'name': 'Paracetamol', 'unit': 'tablet', 'quantity_in_stock': 100}
-        self.assertEqual(self.status_for(Role.DOCTOR, 'get', '/api/pharmacy/drugs/'), status.HTTP_200_OK)
-        self.assertEqual(self.status_for(Role.DOCTOR, 'post', '/api/pharmacy/drugs/', drug), status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.status_for(Role.DOCTOR, 'get', '/api/v1/pharmacy/drugs/'), status.HTTP_200_OK)
         self.assertEqual(
-            self.status_for(Role.PHARMACIST, 'post', '/api/pharmacy/drugs/', drug), status.HTTP_201_CREATED
+            self.status_for(Role.DOCTOR, 'post', '/api/v1/pharmacy/drugs/', drug), status.HTTP_403_FORBIDDEN
+        )
+        self.assertEqual(
+            self.status_for(Role.PHARMACIST, 'post', '/api/v1/pharmacy/drugs/', drug), status.HTTP_201_CREATED
         )
 
     def test_only_lab_tech_records_results(self):
-        self.assertEqual(self.status_for(Role.DOCTOR, 'post', '/api/lab/test-results/', {}), status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            self.status_for(Role.DOCTOR, 'post', '/api/v1/lab/test-results/', {}), status.HTTP_403_FORBIDDEN
+        )
 
     def test_dispense_records_cannot_be_deleted(self):
         self.assertEqual(
-            self.status_for(Role.PHARMACIST, 'delete', '/api/pharmacy/dispense-transactions/1/'),
+            self.status_for(Role.PHARMACIST, 'delete', '/api/v1/pharmacy/dispense-transactions/1/'),
             status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
@@ -63,7 +67,7 @@ class DispenseTests(TenantAPITestCase):
 
     def dispense(self, *items):
         return self.client.post(
-            '/api/pharmacy/dispense-transactions/',
+            '/api/v1/pharmacy/dispense-transactions/',
             {'items': [{'prescription': p.id, 'drug': d.id, 'quantity_dispensed': q} for p, d, q in items]},
             format='json',
         )
@@ -113,5 +117,5 @@ class DispenseTests(TenantAPITestCase):
 
     def test_prescribed_drug_cannot_be_deleted(self):
         self.client.force_authenticate(make_user(Role.ADMIN))
-        response = self.client.delete(f'/api/pharmacy/drugs/{self.drug.id}/')
+        response = self.client.delete(f'/api/v1/pharmacy/drugs/{self.drug.id}/')
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)

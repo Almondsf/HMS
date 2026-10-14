@@ -15,7 +15,7 @@ class LoginTests(TenantAPITestCase):
         self.user = make_user(User.UserType.DOCTOR)
 
     def login(self, password=TEST_PASSWORD):
-        return self.client.post('/api/auth/login/', {'email': self.user.email, 'password': password})
+        return self.client.post('/api/v1/auth/login/', {'email': self.user.email, 'password': password})
 
     def test_login_returns_tokens_and_user(self):
         response = self.login()
@@ -42,29 +42,29 @@ class LoginTests(TenantAPITestCase):
 class SessionTests(TenantAPITestCase):
     def setUp(self):
         self.user = make_user(User.UserType.RECEPTIONIST)
-        tokens = self.client.post('/api/auth/login/', {'email': self.user.email, 'password': TEST_PASSWORD}).data
+        tokens = self.client.post('/api/v1/auth/login/', {'email': self.user.email, 'password': TEST_PASSWORD}).data
         self.refresh = tokens['refresh']
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
 
     def refresh_works(self):
-        return self.client.post('/api/auth/token/refresh/', {'refresh': self.refresh}).status_code == 200
+        return self.client.post('/api/v1/auth/token/refresh/', {'refresh': self.refresh}).status_code == 200
 
     def test_logout_revokes_refresh_token(self):
-        response = self.client.post('/api/auth/logout/', {'refresh': self.refresh})
+        response = self.client.post('/api/v1/auth/logout/', {'refresh': self.refresh})
         self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
         self.assertFalse(self.refresh_works())
 
     def test_cannot_log_out_someone_elses_token(self):
         other = make_user(User.UserType.DOCTOR)
-        other_refresh = self.client.post('/api/auth/login/', {'email': other.email, 'password': TEST_PASSWORD}).data[
+        other_refresh = self.client.post('/api/v1/auth/login/', {'email': other.email, 'password': TEST_PASSWORD}).data[
             'refresh'
         ]
-        response = self.client.post('/api/auth/logout/', {'refresh': other_refresh})
+        response = self.client.post('/api/v1/auth/logout/', {'refresh': other_refresh})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_password_change_revokes_sessions(self):
         response = self.client.post(
-            '/api/auth/password/change/',
+            '/api/v1/auth/password/change/',
             {
                 'old_password': TEST_PASSWORD,
                 'new_password': 'An0ther-Str0ng-pass!',
@@ -74,7 +74,7 @@ class SessionTests(TenantAPITestCase):
         self.assertFalse(self.refresh_works())
 
     def test_me_cannot_change_role(self):
-        response = self.client.patch('/api/auth/me/', {'user_type': 'admin', 'first_name': 'Ada'})
+        response = self.client.patch('/api/v1/auth/me/', {'user_type': 'admin', 'first_name': 'Ada'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertEqual(self.user.user_type, User.UserType.RECEPTIONIST)

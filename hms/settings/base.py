@@ -37,6 +37,7 @@ SHARED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_filters',
     'drf_yasg',
     # Platform operators and platform-level audit trail
     'authentication',
@@ -74,6 +75,7 @@ MIDDLEWARE = [
     'tenants.middleware.HealthCheckMiddleware',
     'tenants.middleware.HospitalMiddleware',  # selects the hospital schema; must precede anything using the DB
     'tenants.middleware.HospitalTimezoneMiddleware',
+    'helpers.middleware.LegacyApiPathMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'audit.context.AuditContextMiddleware',
@@ -142,7 +144,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'helpers.api.StandardPagination',
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+    ],
     'PAGE_SIZE': 10,
     'EXCEPTION_HANDLER': 'helpers.api.api_exception_handler',
     'DEFAULT_THROTTLE_CLASSES': [

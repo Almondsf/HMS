@@ -23,7 +23,7 @@ class ChangeTrackingTests(TenantAPITestCase):
 
     def open_visit(self, **headers):
         return self.client.post(
-            '/api/visits/',
+            '/api/v1/visits/',
             {
                 'patient': self.patient.id,
                 'assigned_doctor': self.doctor.doctorprofile.id,
@@ -50,7 +50,7 @@ class ChangeTrackingTests(TenantAPITestCase):
 
     def test_update_records_only_changed_fields(self):
         visit_id = self.open_visit().data['id']
-        self.client.patch(f'/api/visits/{visit_id}/', {'status': 'completed'})
+        self.client.patch(f'/api/v1/visits/{visit_id}/', {'status': 'completed'})
 
         event = AuditEvent.objects.get(action='update', resource_type='clinical.visit')
         self.assertEqual(event.changes, {'status': ['in_progress', 'completed']})
@@ -62,7 +62,7 @@ class ChangeTrackingTests(TenantAPITestCase):
 
     def test_passwords_are_redacted(self):
         self.client.post(
-            '/api/create-profile/patients/',
+            '/api/v1/create-profile/patients/',
             {'user': {'email': 'new@example.com', 'password': 'Sup3r-secret-pw', 'first_name': 'N', 'last_name': 'P'}},
             format='json',
         )
@@ -82,31 +82,31 @@ class AccessLoggingTests(TenantAPITestCase):
         self.client.force_authenticate(self.doctor)
 
     def test_viewing_a_record_is_logged(self):
-        self.client.get(f'/api/consultations/{self.consultation.id}/')
+        self.client.get(f'/api/v1/consultations/{self.consultation.id}/')
         event = AuditEvent.objects.get(action='view')
         self.assertEqual((event.resource_type, event.resource_id), ('clinical.consultation', str(self.consultation.id)))
         self.assertEqual(event.patient_id, self.patient_id)
 
     def test_listing_logs_ids_and_patients_on_page(self):
-        self.client.get('/api/visits/?page=1')
+        self.client.get('/api/v1/visits/?page=1')
         event = AuditEvent.objects.get(action='list', resource_type='clinical.visit')
         self.assertEqual(event.metadata['ids'], [self.consultation.visit_id])
         self.assertEqual(event.metadata['patient_ids'], [self.patient_id])
         self.assertEqual(event.metadata['query'], {'page': '1'})
 
     def test_admin_can_trace_everyone_who_saw_a_patient(self):
-        self.client.get('/api/visits/')
-        self.client.get(f'/api/consultations/{self.consultation.id}/')
+        self.client.get('/api/v1/visits/')
+        self.client.get(f'/api/v1/consultations/{self.consultation.id}/')
 
         self.client.force_authenticate(make_user(Role.ADMIN))
-        response = self.client.get(f'/api/audit/events/?patient={self.patient_id}&category=data_access')
+        response = self.client.get(f'/api/v1/audit/events/?patient={self.patient_id}&category=data_access')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual({e['action'] for e in response.data['results']}, {'list', 'view'})
         self.assertEqual({e['actor_id'] for e in response.data['results']}, {self.doctor.id})
 
     def test_audit_log_is_admin_only(self):
-        self.assertEqual(self.client.get('/api/audit/events/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.get('/api/v1/audit/events/').status_code, status.HTTP_403_FORBIDDEN)
 
 
 class SecurityEventTests(TenantAPITestCase):
@@ -114,7 +114,7 @@ class SecurityEventTests(TenantAPITestCase):
         self.user = make_user(Role.NURSE)
 
     def login(self, password):
-        return self.client.post('/api/auth/login/', {'email': self.user.email, 'password': password})
+        return self.client.post('/api/v1/auth/login/', {'email': self.user.email, 'password': password})
 
     def actions(self):
         return list(
@@ -128,7 +128,7 @@ class SecurityEventTests(TenantAPITestCase):
         self.assertEqual(AuditEvent.objects.get(action='login').actor_id, self.user.id)
 
     def test_unknown_email_is_logged(self):
-        self.client.post('/api/auth/login/', {'email': 'nobody@example.com', 'password': 'x'})
+        self.client.post('/api/v1/auth/login/', {'email': 'nobody@example.com', 'password': 'x'})
         event = AuditEvent.objects.get(action='login_failed')
         self.assertIsNone(event.actor_id)
         self.assertEqual(event.metadata['email'], 'nobody@example.com')
@@ -141,9 +141,9 @@ class SecurityEventTests(TenantAPITestCase):
 
     def test_permission_denied_is_logged(self):
         self.client.force_authenticate(self.user)
-        self.client.post('/api/pharmacy/drugs/', {'name': 'X'})
+        self.client.post('/api/v1/pharmacy/drugs/', {'name': 'X'})
         event = AuditEvent.objects.get(action='permission_denied')
-        self.assertEqual((event.actor_id, event.metadata['path']), (self.user.id, '/api/pharmacy/drugs/'))
+        self.assertEqual((event.actor_id, event.metadata['path']), (self.user.id, '/api/v1/pharmacy/drugs/'))
 
 
 class DomainEventTests(TenantAPITestCase):
@@ -167,7 +167,7 @@ class DomainEventTests(TenantAPITestCase):
 
         self.client.force_authenticate(labtech)
         with self.captureOnCommitCallbacks(execute=True) as callbacks:
-            self.client.patch(f'/api/lab/test-results/{result.id}/', {'status': 'completed', 'result_value': 'OK'})
+            self.client.patch(f'/api/v1/lab/test-results/{result.id}/', {'status': 'completed', 'result_value': 'OK'})
             self.assertEqual(self.received, [])  # nothing before commit
 
         self.assertTrue(callbacks)
@@ -199,7 +199,7 @@ class DomainEventTests(TenantAPITestCase):
         )
         self.client.force_authenticate(make_user(Role.PHARMACIST))
         self.client.post(
-            '/api/pharmacy/dispense-transactions/',
+            '/api/v1/pharmacy/dispense-transactions/',
             {'items': [{'prescription': prescription.id, 'drug': drug.id, 'quantity_dispensed': 9}]},
             format='json',
         )

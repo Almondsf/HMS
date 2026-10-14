@@ -26,6 +26,8 @@ class PatientViewSet(AuditedReadMixin, viewsets.ModelViewSet):
     '''
 
     serializer_class = PatientSerializer
+    filterset_fields = ['assigned_doctor', 'blood_group', 'genotype']
+    ordering_fields = ['mrn', 'user__last_name']
     permission_classes = [
         requires_feature(Feature.CLINICAL),
         allow_roles(
