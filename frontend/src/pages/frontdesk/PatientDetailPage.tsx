@@ -6,11 +6,13 @@ import { usePatientVisits } from '@/api/clinical'
 
 import { fullName, useOpenVisit, usePatient, useSavePatient } from '@/api/frontDesk'
 import { DoctorSelect, PatientForm } from '@/components/frontDesk'
+import { InsuranceCover } from '@/components/InsuranceCover'
 import { Modal } from '@/components/Modal'
 import { Badge, Button, Card, ErrorAlert, Input, PageHeader, Spinner } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { useCurrentUser } from '@/lib/auth'
 import { age, formatDate, formatDateTime, titleCase } from '@/lib/format'
+import { useHospital } from '@/lib/hospital'
 import { VISIT_STATUS } from '@/lib/labels'
 import { BookAppointmentModal } from '@/pages/frontdesk/BookAppointmentModal'
 
@@ -99,6 +101,7 @@ export function PatientDetailPage() {
   const { id } = useParams()
   const user = useCurrentUser()
   const patientId = Number(id)
+  const { data: hospital } = useHospital()
   const { data: patient, isLoading, error } = usePatient(patientId)
   const save = useSavePatient(patientId)
   const [editing, setEditing] = useState(false)
@@ -161,6 +164,11 @@ export function PatientDetailPage() {
         </Card>
       </div>
 
+      {hospital?.features.includes('insurance') && frontDesk && (
+        <div className="mt-6 lg:w-1/3">
+          <InsuranceCover patientId={patient.id} canEdit={frontDesk} />
+        </div>
+      )}
       {clinician && <VisitHistory patientId={patient.id} />}
 
       <Modal open={editing} title="Edit patient" onClose={() => setEditing(false)} wide>

@@ -40,7 +40,10 @@ const ROLE_FOCUS: Record<Role, Focus[]> = {
     { icon: Pill, title: 'Pharmacy queue', description: 'Prescriptions waiting to be dispensed', to: '/pharmacy' },
     { icon: Pill, title: 'Drugs & stock', description: 'Stock levels and prices', to: '/pharmacy/drugs' },
   ],
-  cashier: [{ icon: CreditCard, title: 'Billing', description: 'Invoices, payments and receipts' }],
+  cashier: [
+    { icon: CreditCard, title: 'Billing', description: 'Invoices, payments and receipts', to: '/billing' },
+    { icon: Activity, title: 'Daily summary', description: 'End-of-day reconciliation', to: '/billing/summary' },
+  ],
   patient: [{ icon: CalendarDays, title: 'My appointments', description: 'Upcoming visits and records' }],
 }
 

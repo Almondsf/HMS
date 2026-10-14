@@ -7,6 +7,11 @@ import { useAuth } from '@/lib/auth'
 import { ACCESS } from '@/lib/navigation'
 import type { Role } from '@/lib/roles'
 import { currentHospital } from '@/lib/tenant'
+import { BillingPage } from '@/pages/billing/BillingPage'
+import { ClaimsPage } from '@/pages/billing/ClaimsPage'
+import { InvoicePage } from '@/pages/billing/InvoicePage'
+import { ClaimDocumentPage, ReceiptPage } from '@/pages/billing/PrintPages'
+import { SummaryPage } from '@/pages/billing/SummaryPage'
 import { VisitPage } from '@/pages/clinical/VisitPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { AppointmentsPage } from '@/pages/frontdesk/AppointmentsPage'
@@ -127,6 +132,54 @@ export function App() {
           element={
             <RequireRole roles={ACCESS.pharmacy}>
               <DrugsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="billing"
+          element={
+            <RequireRole roles={ACCESS.billing}>
+              <BillingPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="billing/invoices/:id"
+          element={
+            <RequireRole roles={ACCESS.billing}>
+              <InvoicePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="billing/payments/:id/receipt"
+          element={
+            <RequireRole roles={ACCESS.billing}>
+              <ReceiptPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="billing/summary"
+          element={
+            <RequireRole roles={ACCESS.billingOffice}>
+              <SummaryPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="insurance/claims"
+          element={
+            <RequireRole roles={ACCESS.billingOffice}>
+              <ClaimsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="insurance/claims/:id/document"
+          element={
+            <RequireRole roles={ACCESS.billingOffice}>
+              <ClaimDocumentPage />
             </RequireRole>
           }
         />

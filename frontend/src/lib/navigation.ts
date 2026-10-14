@@ -1,4 +1,14 @@
-import { CalendarDays, FlaskConical, LayoutDashboard, ListOrdered, Pill, Users, type LucideIcon } from 'lucide-react'
+import {
+  CalendarDays,
+  CreditCard,
+  FlaskConical,
+  LayoutDashboard,
+  ListOrdered,
+  Pill,
+  ShieldCheck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 
 import type { Feature, Role } from './roles'
 
@@ -20,6 +30,8 @@ export const ACCESS = {
   visits: ['doctor', 'nurse', 'admin'],
   lab: ['lab_tech', 'admin'],
   pharmacy: ['pharmacist', 'admin'],
+  billing: ['cashier', 'admin', 'receptionist'],
+  billingOffice: ['cashier', 'admin'],
 } satisfies Record<string, Role[]>
 
 /** Sidebar entries. Each screen chunk adds its items here. */
@@ -48,6 +60,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { to: '/lab', label: 'Lab work', icon: FlaskConical, roles: ACCESS.lab, feature: 'lab' },
   { to: '/pharmacy', label: 'Pharmacy', icon: Pill, roles: ACCESS.pharmacy, feature: 'pharmacy' },
+  { to: '/billing', label: 'Billing', icon: CreditCard, roles: ACCESS.billing, feature: 'billing' },
+  {
+    to: '/insurance/claims',
+    label: 'Insurance claims',
+    icon: ShieldCheck,
+    roles: ACCESS.billingOffice,
+    feature: 'insurance',
+  },
 ]
 
 export function visibleNavItems(role: Role, features: Feature[]): NavItem[] {
