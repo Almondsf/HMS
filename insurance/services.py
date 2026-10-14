@@ -41,7 +41,8 @@ def create_claim(*, invoice, coverage, authorization_code=''):
     if invoice.claims.filter(status__in=Claim.OPEN_STATUSES).exists():
         raise ValidationError('This invoice already has an open claim.')
 
-    amount = (invoice.patient_due * coverage.effective_percent / 100).quantize(CENT, rounding=ROUND_HALF_UP)
+    percent = Decimal(str(coverage.effective_percent))
+    amount = (invoice.patient_due * percent / 100).quantize(CENT, rounding=ROUND_HALF_UP)
     if amount <= 0:
         raise ValidationError('Nothing left on this invoice for the insurer to cover.')
     claim = Claim.objects.create(

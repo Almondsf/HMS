@@ -166,3 +166,6 @@ cython_debug/
 
 staticfiles
 
+
+# Local demo accounts (never commit)
+DEMO_CREDENTIALS.md

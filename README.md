@@ -130,6 +130,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `create_hospital --name --schema --admin-email [--domain --plan]` | Provision a hospital: schema, address and first admin |
 | `adopt_legacy_data --schema <hospital> [--force]` | One-time upgrade: copy a pre-multi-tenancy database (data in `public`) into a hospital |
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
+| `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
 
 ## Roles and access
 
