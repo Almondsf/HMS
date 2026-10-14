@@ -32,8 +32,14 @@ const ROLE_FOCUS: Record<Role, Focus[]> = {
   nurse: [
     { icon: Activity, title: 'Triage & vitals', description: 'Prioritise the queue, record observations', to: '/queue' },
   ],
-  lab_tech: [{ icon: FlaskConical, title: 'Lab work', description: 'Pending tests and results' }],
-  pharmacist: [{ icon: Pill, title: 'Pharmacy queue', description: 'Prescriptions waiting to be dispensed' }],
+  lab_tech: [
+    { icon: FlaskConical, title: 'Lab work', description: 'Pending tests and results', to: '/lab' },
+    { icon: FlaskConical, title: 'Test list & prices', description: 'What the lab offers', to: '/lab/tests' },
+  ],
+  pharmacist: [
+    { icon: Pill, title: 'Pharmacy queue', description: 'Prescriptions waiting to be dispensed', to: '/pharmacy' },
+    { icon: Pill, title: 'Drugs & stock', description: 'Stock levels and prices', to: '/pharmacy/drugs' },
+  ],
   cashier: [{ icon: CreditCard, title: 'Billing', description: 'Invoices, payments and receipts' }],
   patient: [{ icon: CalendarDays, title: 'My appointments', description: 'Upcoming visits and records' }],
 }
