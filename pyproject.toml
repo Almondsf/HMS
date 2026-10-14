@@ -25,7 +25,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"*/tests.py" = ["S105", "S106"]          # hard-coded test passwords
+"*/tests.py" = ["S105", "S106", "S107"]  # hard-coded test passwords
+"*/test_*.py" = ["S105", "S106", "S107"]
 "helpers/testing.py" = ["S105", "S106"]
 "hms/settings/*.py" = ["F403", "F405"]   # settings modules build on `from .base import *`
 
