@@ -5,8 +5,9 @@ URLs for the platform site (public schema), e.g. hms.app. Hospital sites
 
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 
+from hms import spa
 from subscriptions.views import paystack_webhook
 
 urlpatterns = [
@@ -15,6 +16,10 @@ urlpatterns = [
     path('api/v1/auth/', include('authentication.urls')),
     path('api/v1/platform/', include('tenants.urls')),
     path('api/v1/platform/billing/paystack/webhook/', paystack_webhook, name='paystack-webhook'),
+    # Self-serve signup (public, rate limited)
+    path('api/v1/signup/', include('signup.urls')),
+    # The web app: landing page and signup (everything that isn't the API)
+    re_path(r'^(?!api/|static/)(?P<path>.*)$', spa.app, name='platform-app'),
 ]
 
 handler404 = 'helpers.api.not_found'

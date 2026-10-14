@@ -48,6 +48,8 @@ SHARED_APPS = [
     'terminology',
     # What hospitals pay for the platform
     'subscriptions',
+    # Hospitals signing themselves up
+    'signup',
 ]
 
 TENANT_APPS = [
@@ -170,6 +172,7 @@ REST_FRAMEWORK = {
         'user': config('THROTTLE_USER', default='2000/hour'),
         'login': config('THROTTLE_LOGIN', default='10/min'),
         'password_reset': config('THROTTLE_PASSWORD_RESET', default='5/hour'),
+        'signup': config('THROTTLE_SIGNUP', default='5/hour'),
     },
 }
 
@@ -364,3 +367,7 @@ PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
 SUBSCRIPTION_TRIAL_DAYS = config('SUBSCRIPTION_TRIAL_DAYS', default=14, cast=int)
 # After a missed renewal: full access with a warning for this long, then read-only
 SUBSCRIPTION_GRACE_DAYS = config('SUBSCRIPTION_GRACE_DAYS', default=7, cast=int)
+
+# Self-serve signup creates the hospital in a background thread (it takes longer
+# than a request may run); `manage.py process_signups` finishes interrupted ones
+SIGNUP_PROVISION_IN_BACKGROUND = config('SIGNUP_PROVISION_IN_BACKGROUND', default=True, cast=bool)

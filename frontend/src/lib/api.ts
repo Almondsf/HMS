@@ -1,4 +1,4 @@
-import { apiBaseUrl, currentHospital } from './tenant'
+import { apiBaseUrl, currentHospital, platformApiBaseUrl } from './tenant'
 
 /** An error response from the API, with field errors when it was a validation error. */
 export class ApiError extends Error {
@@ -65,7 +65,8 @@ export const SESSION_ENDED = 'hms:session-ended'
 
 // ---- Requests ----
 
-const baseUrl = hospital ? apiBaseUrl(hospital) : ''
+// No hospital in the address: this is the platform site (landing page, signup)
+const baseUrl = hospital ? apiBaseUrl(hospital) : platformApiBaseUrl()
 
 type Query = Record<string, string | number | boolean | null | undefined>
 

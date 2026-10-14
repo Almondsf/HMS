@@ -17,7 +17,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health/
     # Runs before each new version goes live; migrates every hospital's schema
-    preDeployCommand: python manage.py migrate --noinput && python manage.py setup_platform
+    preDeployCommand: python manage.py migrate --noinput && python manage.py setup_platform && python manage.py process_signups
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: hms.settings.prod

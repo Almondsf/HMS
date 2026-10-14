@@ -10,7 +10,8 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const hospitalName = hospitalDisplayName()
-  const [email, setEmail] = useState('')
+  // Prefilled when arriving from the signup page
+  const [email, setEmail] = useState(() => new URLSearchParams(location.search).get('email') ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<unknown>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -37,7 +38,10 @@ export function LoginPage() {
     <div className="flex min-h-full items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 grid size-12 place-items-center rounded-xl bg-brand-500 text-white shadow-sm" aria-hidden>
+          <div
+            className="mb-4 grid size-12 place-items-center rounded-xl bg-brand-500 text-white shadow-sm"
+            aria-hidden
+          >
             <svg viewBox="0 0 24 24" className="size-6" fill="currentColor">
               <path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" />
             </svg>

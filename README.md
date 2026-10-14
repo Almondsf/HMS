@@ -134,6 +134,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
 | `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
 | `database_report` | JSON summary per schema (row counts, migrations, audit protection), used to verify backups |
+| `process_signups [--retry-failed]` | Finish hospital setups interrupted part-way (e.g. by a deploy) and delete signups never verified. Runs on every deploy |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
 
 ## Roles and access
@@ -267,6 +268,24 @@ Every report takes `?date_from=&date_to=` (`YYYY-MM-DD`, in hospital time). The 
   - Reports include the stack trace, hospital, request id and the user's internal id and role.
   - **Never** sent: request bodies, query strings (searches can contain patient names), cookies, auth headers, local variables, or names and emails. See [helpers/monitoring.py](helpers/monitoring.py).
   - In the web app, a crash shows a "Something went wrong" screen instead of a blank page.
+
+### Self-serve signup
+
+Hospitals can sign themselves up at the platform address (e.g. `yourdomain.com/signup`). The platform site also has a landing page with prices, and a "Sign in" page that sends people to their hospital's own address.
+
+1. **Sign up:** the owner gives the hospital's name, its web address (e.g. `st-lukes` for `st-lukes.yourdomain.com`), a plan for the trial, and their own details and password. The API checks the address is free and not reserved (`www`, `api`, `admin`...) and that the password is strong, then **emails a verification link. Nothing is created yet.**
+2. **Verify:** opening the link creates the hospital: its schema, the owner's admin account (with the password they chose) and a free trial of the chosen plan. This takes 10-60 seconds, longer than a web request should, so it runs in a background thread while the page shows progress. A welcome email follows.
+3. **Sign in** at the hospital's own address.
+
+Abuse protection:
+- Nothing heavy happens before the email is verified.
+- 5 signups per hour per IP (`THROTTLE_SIGNUP`), and 3 per email address per day.
+- A hidden form field catches bots.
+- The page never reveals whether an email is already in use.
+
+Signups are kept in the platform admin (*Signups*). A deploy can interrupt a setup in progress; `process_signups` runs on every deploy to finish it, and also deletes signups never verified after 7 days, since they hold personal details. Locally, the verification email prints in the `runserver` console.
+
+API (platform domain, no sign-in): `POST /api/v1/signup/`, `GET /api/v1/signup/availability/?address=`, `GET /api/v1/signup/plans/`, `POST /api/v1/signup/verify/` and `POST /api/v1/signup/status/` (both take `{"token"}`).
 
 ### Subscriptions (what hospitals pay)
 

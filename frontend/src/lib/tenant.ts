@@ -44,6 +44,24 @@ export function apiBaseUrl(hospital: string): string {
   return (template ?? `${window.location.protocol}//{hospital}.localhost:8000`).replace('{hospital}', hospital)
 }
 
+/** The platform site's API (signup), when this tab isn't a hospital's. */
+export function platformApiBaseUrl(): string {
+  const template = runtime.apiUrl ?? import.meta.env.VITE_API_URL
+  if (template === '') return ''
+  return (template ?? `${window.location.protocol}//{hospital}.localhost:8000`).replace('{hospital}.', '')
+}
+
+/** A hospital's web app address, e.g. https://st-lukes.hms.app/login (keeps the dev server's port). */
+export function hospitalAppUrl(address: string, path = '/'): string {
+  const { protocol, port } = window.location
+  return `${protocol}//${address}.${BASE_DOMAIN}${port ? `:${port}` : ''}${path}`
+}
+
+/** The domain hospitals live under, e.g. "hms.app" (st-lukes.hms.app). */
+export function tenantBaseDomain(): string {
+  return BASE_DOMAIN
+}
+
 /** A readable name from the address until the real one loads after sign-in: st-lukes -> "St Lukes". */
 export function hospitalDisplayName(hospital = currentHospital()): string {
   if (!hospital) return 'HMS'

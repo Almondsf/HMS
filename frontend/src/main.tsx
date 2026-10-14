@@ -1,7 +1,7 @@
 import './index.css'
 
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 
@@ -10,7 +10,12 @@ import { CrashScreen } from './components/CrashScreen'
 import { ApiError } from './lib/api'
 import { AuthProvider } from './lib/auth'
 import { ErrorBoundary, initMonitoring } from './lib/monitoring'
-import { hospitalDisplayName } from './lib/tenant'
+import { currentHospital, hospitalDisplayName } from './lib/tenant'
+
+// Without a hospital in the address, this is the platform site: landing page and signup
+const PlatformSite = lazy(() =>
+  import('./pages/platform/PlatformSite').then((module) => ({ default: module.PlatformSite })),
+)
 
 document.title = hospitalDisplayName()
 initMonitoring()
@@ -39,9 +44,15 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary fallback={({ resetError }) => <CrashScreen onRetry={resetError} />}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
+          {currentHospital() ? (
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          ) : (
+            <Suspense>
+              <PlatformSite />
+            </Suspense>
+          )}
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

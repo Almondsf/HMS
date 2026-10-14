@@ -6,11 +6,10 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { useAuth } from '@/lib/auth'
 import { ACCESS } from '@/lib/navigation'
 import type { Role } from '@/lib/roles'
-import { currentHospital } from '@/lib/tenant'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ChangePasswordPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/PasswordPages'
-import { NoHospitalPage, NotFoundPage } from '@/pages/StatusPages'
+import { NotFoundPage } from '@/pages/StatusPages'
 
 /** Load a screen only when first opened: smaller downloads on slow connections. */
 function page<Module extends Record<string, unknown>>(load: () => Promise<Module>, name: keyof Module) {
@@ -91,8 +90,6 @@ export function RequireRole({ roles, children }: { roles: Role[]; children: Reac
 }
 
 export function App() {
-  if (!currentHospital()) return <NoHospitalPage />
-
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

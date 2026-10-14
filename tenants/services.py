@@ -42,21 +42,27 @@ def provision_hospital(
     name,
     schema_name,
     admin_email,
-    admin_password,
     admin_first_name,
     admin_last_name,
     domain=None,
     plan=Hospital.Plan.BASIC,
     contact_email='',
+    admin_password=None,
+    admin_password_hash=None,
 ):
     '''
     Create a hospital: its schema (with all tables), its address and its first
     admin user. Either everything is created or nothing is left behind.
+    Give the admin's password, or its hash (self-serve signup never keeps
+    the password itself).
     '''
+    if (admin_password is None) == (admin_password_hash is None):
+        raise ValueError('Give exactly one of admin_password and admin_password_hash.')
     domain = domain or default_domain(schema_name)
     with schema_context(get_public_schema_name()):
         validate_new_hospital(schema_name=schema_name, domain=domain)
-        validate_password(admin_password)
+        if admin_password is not None:
+            validate_password(admin_password)
 
         hospital = Hospital(name=name, schema_name=schema_name, plan=plan, contact_email=contact_email or admin_email)
         hospital.save(verbosity=0)  # creates the schema and runs all hospital migrations in it
@@ -72,6 +78,9 @@ def provision_hospital(
                     is_staff=True,
                     is_admin=True,
                 )
+                if admin_password_hash is not None:
+                    admin.password = admin_password_hash
+                    admin.save(update_fields=['password'])
         except Exception:
             hospital.delete(force_drop=True)
             raise

@@ -333,10 +333,18 @@ As the platform operator, I want web screens showing hospitals, trials ending, o
 
 ## 11. Prospective hospital (BUY)
 
-**BUY-1 🔜 Self-serve signup**
+**BUY-1 ✅ Self-serve signup**
 As a hospital owner, I want to sign up on the website and start a free trial myself, so that I can try the product without talking to sales.
-- Choose a hospital name and web address; receive the admin account by email.
-- Spam and abuse are limited (verification and rate limiting).
+- I choose the hospital's name, its web address and a plan, and set my own admin password.
+- As I type, the form tells me whether the address is free.
+- Nothing is created until I confirm my email; then the hospital is ready within about a minute and I can sign in.
+- Spam and abuse are limited: email verification, rate limits, a hidden bot trap and reserved addresses.
+
+**BUY-3 ✅ See what it costs**
+As a hospital owner, I want a public page explaining the product and its prices, so that I can decide before signing up.
+
+**BUY-4 ✅ Find my hospital**
+As a staff member who only remembers "HMS", I want to reach my hospital's sign-in page from the main website, so that I don't need the exact link.
 
 **BUY-2 ✅ Choose a plan that fits**
 As a small clinic owner, I want a cheaper plan without lab and insurance, so that I only pay for what I use.

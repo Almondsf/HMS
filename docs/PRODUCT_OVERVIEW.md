@@ -167,7 +167,13 @@ Key ideas:
 - **Append-only:** the database itself refuses to edit or delete audit rows.
 - An admin can answer "**who has looked at this patient's record?**", which is a core requirement of health-data laws such as the NDPA.
 
-### 5.12 Platform (for the operator)
+### 5.12 Self-serve signup
+- Anyone can sign up a hospital at the platform address. They choose its web address (e.g. `st-lukes.yourdomain.com`), a plan for the trial, and their admin password.
+- Nothing is created until they confirm their email. Then the hospital is created in the background (10-60 seconds) while the page shows progress, and a welcome email follows.
+- Abuse limits: email verification, rate limits per IP and per email, a hidden bot trap, and reserved addresses.
+- The platform site also has a landing page with live prices, and a "Sign in" page that sends people to their hospital's address.
+
+### 5.13 Platform (for the operator)
 - Provision a hospital: its database schema, web address and first admin account.
 - Change a hospital's plan, suspend it, record bank-transfer payments, and edit prices.
 - Paystack webhook for renewals, failed payments and cancellations.
@@ -299,8 +305,7 @@ AuditEvent (append-only, references any of the above)
 
 | Item | Status |
 |---|---|
-| Self-serve hospital signup (sign up and start a trial without the operator) | Next up |
-| Platform operator dashboard (web screens; today it's the API plus Django admin) | Planned |
+| Platform operator dashboard (web screens; today it's the API plus Django admin) | Next up |
 | SMS appointment reminders | Planned (will subscribe to scheduling events) |
 | Patient-facing web or mobile app | Not started; the API already supports patient logins |
 | Inpatient care (wards, beds, admissions), theatre, maternity | Not started |

@@ -94,3 +94,25 @@ def app_url(request, path):
     else:
         base = f'{request.scheme}://{host}'
     return f'{base.rstrip("/")}/{path.lstrip("/")}'
+
+
+def platform_url(request, path):
+    '''A link into the web app on the platform site (e.g. signup emails).'''
+    from django.conf import settings
+
+    if settings.FRONTEND_URL:
+        base = settings.FRONTEND_URL.replace('{subdomain}.', '').format(host=request.get_host())
+    else:
+        base = f'{request.scheme}://{request.get_host()}'
+    return f'{base.rstrip("/")}/{path.lstrip("/")}'
+
+
+def hospital_url(request, address, path):
+    '''A link into a hospital's web app from the platform site, e.g. after signup.'''
+    from django.conf import settings
+
+    if settings.FRONTEND_URL:
+        base = settings.FRONTEND_URL.format(subdomain=address, host=request.get_host())
+    else:
+        base = f'{request.scheme}://{address}.{settings.TENANT_BASE_DOMAIN}'
+    return f'{base.rstrip("/")}/{path.lstrip("/")}'

@@ -13,6 +13,7 @@ REST_FRAMEWORK = {
         'user': '10000/min',
         'login': '10000/min',
         'password_reset': '10000/min',
+        'signup': '10000/min',
     },
 }
 
@@ -20,5 +21,8 @@ STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
     'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
 }
+
+# Create signed-up hospitals in the request's thread, so tests can see them
+SIGNUP_PROVISION_IN_BACKGROUND = False
 
 LOGGING['root']['level'] = 'WARNING'  # noqa: F405

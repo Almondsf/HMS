@@ -9,8 +9,8 @@ import json
 from functools import lru_cache
 
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseRedirect
-from django.urls import reverse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.urls import NoReverseMatch, reverse
 
 
 @lru_cache(maxsize=1)
@@ -34,8 +34,11 @@ def _index_html():
 def app(request, path=''):
     html = _index_html()
     if html is None:
-        # API-only deployment (frontend not built): send people to the API docs
-        return HttpResponseRedirect(reverse('schema-swagger-ui'))
+        # API-only deployment (frontend not built): send people to the API docs, if this site has them
+        try:
+            return HttpResponseRedirect(reverse('schema-swagger-ui'))
+        except NoReverseMatch:
+            raise Http404 from None
     response = HttpResponse(html)
     response['Cache-Control'] = 'no-cache'  # always pick up a new deploy; assets are fingerprinted
     return response
