@@ -9,10 +9,11 @@ from authentication.permissions import Role, allow_roles
 from tenants.features import Feature, requires_feature
 
 from . import services
-from .filters import ConsultationFilter, PrescriptionFilter, VisitFilter, VitalSignsFilter
-from .models import Consultation, Prescription, Visit, VitalSigns
+from .filters import ConsultationFilter, DiagnosisFilter, PrescriptionFilter, VisitFilter, VitalSignsFilter
+from .models import Consultation, Diagnosis, Prescription, Visit, VitalSigns
 from .serializers import (
     ConsultationSerializer,
+    DiagnosisDetailSerializer,
     PrescriptionDetailSerializer,
     QueueEntrySerializer,
     TriageSerializer,
@@ -28,7 +29,12 @@ BASE_VISIT_PERMISSIONS = [requires_feature(Feature.CLINICAL)]
 
 VISIT_PREFETCH = ['vitals__recorded_by']
 
-CONSULTATION_PREFETCH = ['prescriptions__drug', 'lab_orders__results__test', 'lab_orders__results__labtech__user']
+CONSULTATION_PREFETCH = [
+    'diagnoses',
+    'prescriptions__drug',
+    'lab_orders__results__test',
+    'lab_orders__results__labtech__user',
+]
 
 
 class VisitViewSet(AuditedReadMixin, viewsets.ModelViewSet):
@@ -256,3 +262,30 @@ class VitalSignsViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         if user.user_type == Role.PATIENT:
             return vitals.filter(visit__patient__user=user)
         return vitals
+
+
+class DiagnosisViewSet(AuditedReadMixin, viewsets.ModelViewSet):
+    '''
+    Diagnoses across consultations. The assigned doctor adds them (also inline
+    when creating a consultation) and updates certainty, e.g. provisional ->
+    confirmed or ruled_out. Never deleted. Filters: patient, consultation,
+    code, certainty, kind.
+    '''
+
+    serializer_class = DiagnosisDetailSerializer
+    filterset_class = DiagnosisFilter
+    ordering_fields = ['created_at']
+    permission_classes = [
+        requires_feature(Feature.CLINICAL),
+        allow_roles(read=[Role.ADMIN, Role.PATIENT], write=[Role.DOCTOR]),
+    ]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+
+    def get_queryset(self):
+        diagnoses = Diagnosis.objects.select_related('code', 'consultation__visit')
+        user = self.request.user
+        if user.user_type == Role.DOCTOR:
+            return diagnoses.filter(consultation__visit__assigned_doctor__user=user)
+        if user.user_type == Role.PATIENT:
+            return diagnoses.filter(consultation__visit__patient__user=user)
+        return diagnoses

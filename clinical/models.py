@@ -93,6 +93,48 @@ class Consultation(TrackingModel):
         return f"Consultation ({self.visit.patient})"
 
 
+class Diagnosis(TrackingModel):
+    """An ICD-10 coded (or free-text) diagnosis made in a consultation."""
+
+    class Kind(models.TextChoices):
+        PRIMARY = 'primary', 'Primary'
+        SECONDARY = 'secondary', 'Secondary'
+
+    class Certainty(models.TextChoices):
+        PROVISIONAL = 'provisional', 'Provisional'
+        CONFIRMED = 'confirmed', 'Confirmed'
+        RULED_OUT = 'ruled_out', 'Ruled out'
+
+    consultation = models.ForeignKey(Consultation, on_delete=models.PROTECT, related_name='diagnoses')
+    # Codes are shared reference data in the public schema: no cross-schema
+    # constraint; codes are never deleted and are validated on save
+    code = models.ForeignKey(
+        'terminology.Icd10Code',
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+    description = models.CharField(max_length=255, help_text='Defaults to the ICD-10 title')
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.PRIMARY)
+    certainty = models.CharField(max_length=20, choices=Certainty.choices, default=Certainty.PROVISIONAL)
+
+    class Meta:
+        ordering = ['consultation', 'kind', 'id']
+        verbose_name_plural = 'diagnoses'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['consultation'],
+                condition=models.Q(kind='primary') & ~models.Q(certainty='ruled_out'),
+                name='one_primary_diagnosis_per_consultation',
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.code_id or 'uncoded'} {self.description}"
+
+
 class Prescription(TrackingModel):
     consultation = models.ForeignKey(Consultation, on_delete=models.PROTECT, related_name='prescriptions')
     drug = models.ForeignKey(

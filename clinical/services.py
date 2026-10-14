@@ -9,11 +9,11 @@ from lab import services as lab_services
 from tenants.features import Feature, has_feature
 
 from . import vitals as vitals_rules
-from .models import Consultation, Prescription, Visit, VitalSigns
+from .models import Consultation, Diagnosis, Prescription, Visit, VitalSigns
 
 
 @transaction.atomic
-def record_consultation(*, doctor_user, visit, prescriptions=(), lab_tests=(), lab_reason='', **notes):
+def record_consultation(*, doctor_user, visit, prescriptions=(), diagnoses=(), lab_tests=(), lab_reason='', **notes):
     '''
     Record a consultation with its prescriptions and lab requests in one step.
     Only the visit's assigned doctor may do this.
@@ -32,6 +32,9 @@ def record_consultation(*, doctor_user, visit, prescriptions=(), lab_tests=(), l
 
     for item in prescriptions:
         add_prescription(consultation=consultation, **item)
+
+    for item in diagnoses:
+        add_diagnosis(consultation=consultation, by=doctor_user, **item)
 
     if lab_tests:
         lab_services.place_order(
@@ -130,3 +133,52 @@ def triage(*, visit, by, level, notes=''):
     if level == Visit.Triage.EMERGENCY:
         events.publish('clinical.emergency_arrival', resource=visit, doctor_id=visit.assigned_doctor_id)
     return visit
+
+
+def _check_diagnosis(*, consultation, code, description, kind, certainty, exclude=None):
+    if code is None and not description:
+        raise ValidationError({'code': 'Choose an ICD-10 code or describe the diagnosis.'})
+    if code is not None and not code.is_active:
+        raise ValidationError({'code': f'{code.code} is a retired code.'})
+    if kind == Diagnosis.Kind.PRIMARY and certainty != Diagnosis.Certainty.RULED_OUT:
+        others = consultation.diagnoses.filter(kind=Diagnosis.Kind.PRIMARY).exclude(
+            certainty=Diagnosis.Certainty.RULED_OUT
+        )
+        if exclude is not None:
+            others = others.exclude(pk=exclude.pk)
+        if others.exists():
+            raise ValidationError({'kind': 'This consultation already has a primary diagnosis.'})
+
+
+@transaction.atomic
+def add_diagnosis(*, consultation, by, code=None, description='', kind=Diagnosis.Kind.PRIMARY, certainty=None):
+    _require_assigned_doctor(consultation.visit, by)
+    certainty = certainty or Diagnosis.Certainty.PROVISIONAL
+    _check_diagnosis(consultation=consultation, code=code, description=description, kind=kind, certainty=certainty)
+    diagnosis = Diagnosis.objects.create(
+        consultation=consultation,
+        code=code,
+        description=description or code.title,
+        kind=kind,
+        certainty=certainty,
+    )
+    events.publish('clinical.diagnosis_recorded', resource=diagnosis, code=diagnosis.code_id, certainty=certainty)
+    return diagnosis
+
+
+@transaction.atomic
+def update_diagnosis(*, diagnosis, by, **changes):
+    """E.g. confirm a provisional diagnosis once lab results are in, or rule it out."""
+    _require_assigned_doctor(diagnosis.consultation.visit, by)
+    proposed = {
+        field: changes.get(field, getattr(diagnosis, field)) for field in ('code', 'description', 'kind', 'certainty')
+    }
+    _check_diagnosis(consultation=diagnosis.consultation, exclude=diagnosis, **proposed)
+    if 'code' in changes and 'description' not in changes and proposed['code'] is not None:
+        proposed['description'] = proposed['code'].title
+    for field, value in proposed.items():
+        setattr(diagnosis, field, value)
+    diagnosis.save()
+    if 'certainty' in changes:
+        events.publish('clinical.diagnosis_updated', resource=diagnosis, certainty=diagnosis.certainty)
+    return diagnosis

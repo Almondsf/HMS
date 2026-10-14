@@ -14,6 +14,7 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 | `pharmacy` | Drug stock, dispensing against prescriptions |
 | `audit` | Append-only audit trail, security events, domain events |
 | `tenants` | Hospitals, their addresses, provisioning, the platform site |
+| `terminology` | Shared reference data: ICD-10 diagnosis codes |
 
 ## Quick start
 
@@ -96,6 +97,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `setup_platform [domain ...]` | Register the platform site and its domains. Idempotent; run on every deploy |
 | `create_hospital --name --schema --admin-email [--domain --plan]` | Provision a hospital: schema, address and first admin |
 | `adopt_legacy_data --schema <hospital> [--force]` | One-time upgrade: copy a pre-multi-tenancy database (data in `public`) into a hospital |
+| `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
 
 ## Roles and access
 
@@ -164,6 +166,18 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
 - **Triage:** `POST /api/v1/visits/<id>/triage/` sets `triage_level` to `emergency`, `urgent`, `standard` or `non_urgent`.
   - The queue orders waiting patients by priority, then arrival.
   - Emergencies publish `clinical.emergency_arrival`.
+
+### Diagnoses (ICD-10)
+
+- **Codes:** ICD-10 codes are shared by every hospital.
+  - A starter set of about 45 codes common in West African care is loaded automatically.
+  - For production, load a complete list with `load_icd10`. Check the licensing terms of the list you choose (e.g. WHO ICD-10).
+  - Look codes up with `GET /api/v1/icd10/?search=malaria`. A code also matches without its dot (`b509`).
+- **Recording diagnoses:** doctors add them inline when creating a consultation (`diagnoses: [...]`), or later with `POST /api/v1/diagnoses/`.
+  - Each has a `kind` (`primary` or `secondary`) and a `certainty` (`provisional`, `confirmed` or `ruled_out`).
+  - A consultation can have only one active primary diagnosis.
+  - When no code fits, a free-text `description` can be used instead.
+  - Diagnoses are never deleted; rule them out instead.
 
 ## API conventions
 

@@ -43,6 +43,8 @@ SHARED_APPS = [
     'authentication',
     'rest_framework_simplejwt.token_blacklist',
     'audit',
+    # Shared reference data (ICD-10 codes)
+    'terminology',
 ]
 
 TENANT_APPS = [

@@ -2,7 +2,7 @@ import django_filters as filters
 from django.db.models import F, Q, Sum
 from django.db.models.functions import Coalesce
 
-from .models import Consultation, Prescription, Visit, VitalSigns
+from .models import Consultation, Diagnosis, Prescription, Visit, VitalSigns
 
 
 class VisitFilter(filters.FilterSet):
@@ -45,3 +45,11 @@ class VitalSignsFilter(filters.FilterSet):
     class Meta:
         model = VitalSigns
         fields = ['visit']
+
+
+class DiagnosisFilter(filters.FilterSet):
+    patient = filters.NumberFilter(field_name='consultation__visit__patient')
+
+    class Meta:
+        model = Diagnosis
+        fields = ['consultation', 'code', 'certainty', 'kind']

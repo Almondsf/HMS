@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/v1/', include('clinical.urls')),
     path('api/v1/', include('profiles.directory_urls')),
     path('api/v1/', include('scheduling.urls')),
+    path('api/v1/', include('terminology.urls')),
     path('api/v1/pharmacy/', include('pharmacy.urls')),
     path('api/v1/lab/', include('lab.urls')),
     path('api/v1/audit/', include('audit.urls')),

@@ -8,9 +8,10 @@ class ClinicalConfig(AppConfig):
     def ready(self):
         from audit import registry
 
-        from .models import Consultation, Prescription, Visit, VitalSigns
+        from .models import Consultation, Diagnosis, Prescription, Visit, VitalSigns
 
         registry.register(Visit, patient=lambda visit: visit.patient_id)
         registry.register(Consultation, patient=lambda consultation: consultation.visit.patient_id)
         registry.register(Prescription, patient=lambda prescription: prescription.consultation.visit.patient_id)
         registry.register(VitalSigns, patient=lambda vitals: vitals.visit.patient_id)
+        registry.register(Diagnosis, patient=lambda diagnosis: diagnosis.consultation.visit.patient_id)

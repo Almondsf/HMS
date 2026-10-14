@@ -4,10 +4,11 @@ from authentication.models import User
 from lab.models import LabTest
 from lab.serializers import TestOrderSerializer
 from pharmacy.models import Drug
+from terminology.models import Icd10Code
 
 from . import services
 from . import vitals as vitals_rules
-from .models import Consultation, Prescription, Visit, VitalSigns
+from .models import Consultation, Diagnosis, Prescription, Visit, VitalSigns
 
 
 class PrescriptionSerializer(serializers.ModelSerializer):
@@ -49,8 +50,37 @@ class PrescriptionDetailSerializer(PrescriptionSerializer):
         fields = ['consultation', 'patient', 'patient_name', 'prescribed_by', *PrescriptionSerializer.Meta.fields]
 
 
+class DiagnosisSerializer(serializers.ModelSerializer):
+    code = serializers.PrimaryKeyRelatedField(
+        queryset=Icd10Code.objects.all(), required=False, allow_null=True, help_text='ICD-10 code, e.g. B54'
+    )
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    class Meta:
+        model = Diagnosis
+        fields = ['id', 'code', 'description', 'kind', 'certainty', 'created_at']
+        read_only_fields = ['created_at']
+
+
+class DiagnosisDetailSerializer(DiagnosisSerializer):
+    """A diagnosis on its own, with the consultation and patient it belongs to."""
+
+    patient = serializers.IntegerField(source='consultation.visit.patient_id', read_only=True)
+
+    class Meta(DiagnosisSerializer.Meta):
+        fields = ['consultation', 'patient', *DiagnosisSerializer.Meta.fields]
+
+    def update(self, diagnosis, validated_data):
+        validated_data.pop('consultation', None)
+        return services.update_diagnosis(diagnosis=diagnosis, by=self.context['request'].user, **validated_data)
+
+    def create(self, validated_data):
+        return services.add_diagnosis(by=self.context['request'].user, **validated_data)
+
+
 class ConsultationSerializer(serializers.ModelSerializer):
     prescriptions = PrescriptionSerializer(many=True, required=False)
+    diagnoses = DiagnosisSerializer(many=True, required=False)
     lab_tests = serializers.PrimaryKeyRelatedField(
         queryset=LabTest.objects.all(),
         many=True,
@@ -71,6 +101,7 @@ class ConsultationSerializer(serializers.ModelSerializer):
             'assessment',
             'plan',
             'follow_up_date',
+            'diagnoses',
             'prescriptions',
             'lab_tests',
             'lab_reason',
@@ -86,9 +117,10 @@ class ConsultationSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         if 'visit' in validated_data and validated_data['visit'] != instance.visit:
             raise serializers.ValidationError({'visit': "A consultation can't be moved to another visit."})
-        if {'prescriptions', 'lab_tests'} & validated_data.keys():
+        if {'prescriptions', 'lab_tests', 'diagnoses'} & validated_data.keys():
             raise serializers.ValidationError(
-                'Prescriptions and lab tests can only be added when the consultation is created.'
+                'Prescriptions, lab tests and diagnoses are added when the consultation is created. '
+                'Use /api/v1/diagnoses/ to add or update diagnoses later.'
             )
         validated_data.pop('lab_reason', None)
         return super().update(instance, validated_data)
