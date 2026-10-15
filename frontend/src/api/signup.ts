@@ -16,6 +16,8 @@ export interface SignupDetails {
   password: string
   /** Honeypot: hidden from people, so only bots fill it */
   website: string
+  /** Accepts the current terms of service and privacy policy */
+  accept_terms: boolean
 }
 
 export interface Availability {

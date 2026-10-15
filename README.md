@@ -278,6 +278,14 @@ Every report takes `?date_from=&date_to=` (`YYYY-MM-DD`, in hospital time). The 
   - **Never** sent: request bodies, query strings (searches can contain patient names), cookies, auth headers, local variables, or names and emails. See [helpers/monitoring.py](helpers/monitoring.py).
   - In the web app, a crash shows a "Something went wrong" screen instead of a blank page.
 
+### Terms of service and privacy policy
+
+Shown at `/terms` and `/privacy` on the platform site, and linked from the footer and the signup form. Signing up requires accepting them, and each signup records the versions it accepted.
+
+- **Edit in the platform admin** (*Terms and privacy*), using simple formatting: `# ` heading, `## ` subheading, `- ` list item, a blank line between paragraphs.
+- **Versions:** published versions are locked, because people accepted them. To change a document, add a new version and use the *Publish* action; it becomes the current one.
+- **Drafts:** the seeded documents (`draft-1`, from [legal/drafts.py](legal/drafts.py)) are starting drafts with `[placeholders]`, not legal advice. They show a "draft, under legal review" notice until a version is published with *draft* unticked.
+
 ### Self-serve signup
 
 Hospitals can sign themselves up at the platform address (e.g. `yourdomain.com/signup`). The platform site also has a landing page with prices, and a "Sign in" page that sends people to their hospital's own address.

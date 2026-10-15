@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from audit.recorder import Category, record
 from authentication.models import User
+from legal.models import LegalDocument
 from tenants.models import Hospital
 from tenants.services import default_domain, provision_hospital, validate_new_hospital
 
@@ -91,9 +92,12 @@ def request_signup(*, hospital_name, address, plan, first_name, last_name, email
         return None
 
     token = secrets.token_urlsafe(32)
+    terms, privacy = LegalDocument.current('terms'), LegalDocument.current('privacy')
     signup = Signup.objects.create(
         hospital_name=hospital_name, address=address, plan=plan, first_name=first_name, last_name=last_name,
         email=email, phone=phone, password_hash=make_password(password), token_hash=_hash(token), ip=ip,
+        terms_version=terms.version if terms else '', privacy_version=privacy.version if privacy else '',
+        terms_accepted_at=timezone.now(),
     )  # fmt: skip
     try:
         send_mail(

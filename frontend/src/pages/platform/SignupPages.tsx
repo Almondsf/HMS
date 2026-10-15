@@ -114,6 +114,7 @@ export function SignupPage() {
     phone: '',
     password: '',
     website: '',
+    accept_terms: false,
   })
   // Suggest an address from the name until the person types their own
   const [addressEdited, setAddressEdited] = useState(false)
@@ -250,6 +251,29 @@ export function SignupPage() {
           </div>
         </Card>
 
+        <div>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              required
+              checked={form.accept_terms}
+              onChange={(event) => setForm((current) => ({ ...current, accept_terms: event.target.checked }))}
+              className="mt-0.5 size-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span>
+              I agree to the{' '}
+              <Link to="/terms" target="_blank" className="font-medium text-brand-600 hover:text-brand-700">
+                terms of service
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" target="_blank" className="font-medium text-brand-600 hover:text-brand-700">
+                privacy policy
+              </Link>
+              , on behalf of {form.hospital_name || 'my organisation'}.
+            </span>
+          </label>
+          {errors.accept_terms && <p className="mt-1 text-sm text-red-600">{errors.accept_terms}</p>}
+        </div>
         <ErrorAlert error={Object.keys(errors).length ? null : signup.error} />
         <div className="flex flex-col-reverse items-center justify-between gap-4 sm:flex-row">
           <p className="text-sm text-slate-600">

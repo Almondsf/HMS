@@ -26,7 +26,7 @@ def details(**overrides):
     return {
         'hospital_name': 'Sunrise Clinic', 'address': 'sunrise', 'plan': 'pro', 'first_name': 'Sade',
         'last_name': 'Bello', 'email': 'sade@sunrise.example', 'phone': '+2348012345678', 'password': PASSWORD,
-        **overrides,
+        'accept_terms': True, **overrides,
     }  # fmt: skip
 
 
@@ -67,6 +67,15 @@ class SignupRequestTests(SignupTestCase):
         response = self.client.get('/api/v1/signup/availability/', {'address': 'Sunrise-Clinic'})
         self.assertTrue(response.data['available'])
         self.assertIn('sunrise-clinic.', response.data['url'])
+
+    def test_terms_must_be_accepted_and_versions_are_recorded(self):
+        refused = self.sign_up(accept_terms=False)
+        self.assertEqual(refused.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('accept_terms', refused.data)
+        self.sign_up()
+        signup = Signup.objects.get()
+        self.assertEqual((signup.terms_version, signup.privacy_version), ('draft-1', 'draft-1'))
+        self.assertIsNotNone(signup.terms_accepted_at)
 
     def test_weak_password_is_refused(self):
         response = self.sign_up(password='password')

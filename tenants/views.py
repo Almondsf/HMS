@@ -106,6 +106,7 @@ class PlatformSignupSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'created_at', 'hospital_name', 'address', 'plan', 'first_name', 'last_name', 'email', 'phone',
             'status', 'error', 'verified_at', 'provisioning_started_at', 'completed_at', 'hospital',
+            'terms_version', 'privacy_version', 'terms_accepted_at',
         ]  # fmt: skip
 
 

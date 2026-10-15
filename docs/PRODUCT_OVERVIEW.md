@@ -172,6 +172,7 @@ Key ideas:
 - Nothing is created until they confirm their email. Then the hospital is created in the background (10-60 seconds) while the page shows progress, and a welcome email follows.
 - Abuse limits: email verification, rate limits per IP and per email, a hidden bot trap, and reserved addresses.
 - The platform site also has a landing page with live prices, and a "Sign in" page that sends people to their hospital's address.
+- Signing up requires accepting the terms of service and privacy policy (shown at `/terms` and `/privacy`). The accepted versions are recorded. The documents are edited and versioned in the platform admin.
 
 ### 5.13 Platform (for the operator)
 - **Operator dashboard** at `/operator` on the platform site:

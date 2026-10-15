@@ -23,6 +23,7 @@ import { formatMoney } from '@/lib/hospital'
 import { hospitalAppUrl, productName, tenantBaseDomain } from '@/lib/tenant'
 
 import { PLANS } from './plans'
+import { LegalPage } from './LegalPage'
 import { SignupPage, VerifySignupPage } from './SignupPages'
 
 function Logo() {
@@ -67,7 +68,17 @@ function SiteLayout() {
         <Outlet />
       </main>
       <footer className="border-t border-slate-100 py-8 text-center text-sm text-slate-500">
-        © {new Date().getFullYear()} {productName()} · Hospital management for clinics and hospitals
+        <p>
+          © {new Date().getFullYear()} {productName()} · Hospital management for clinics and hospitals
+        </p>
+        <p className="mt-2 space-x-4">
+          <Link to="/terms" className="hover:text-brand-700">
+            Terms of service
+          </Link>
+          <Link to="/privacy" className="hover:text-brand-700">
+            Privacy policy
+          </Link>
+        </p>
       </footer>
     </div>
   )
@@ -263,6 +274,8 @@ export function PlatformSite() {
         <Route path="signup" element={<SignupPage />} />
         <Route path="signup/verify" element={<VerifySignupPage />} />
         <Route path="sign-in" element={<FindHospitalPage />} />
+        <Route path="terms" element={<LegalPage kind="terms" />} />
+        <Route path="privacy" element={<LegalPage kind="privacy" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -352,6 +352,11 @@ As a hospital owner, I want a public page explaining the product and its prices,
 **BUY-4 ✅ Find my hospital**
 As a staff member who only remembers "HMS", I want to reach my hospital's sign-in page from the main website, so that I don't need the exact link.
 
+**BUY-5 ✅ Know what I'm agreeing to**
+As a hospital owner, I want to read the terms and privacy policy before signing up, so that I know how our patients' data is handled.
+- Signup can't be completed without accepting them, and the versions accepted are recorded.
+- A draft document is clearly labelled as a draft.
+
 **BUY-2 ✅ Choose a plan that fits**
 As a small clinic owner, I want a cheaper plan without lab and insurance, so that I only pay for what I use.
 

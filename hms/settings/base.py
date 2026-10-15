@@ -50,6 +50,8 @@ SHARED_APPS = [
     'subscriptions',
     # Hospitals signing themselves up
     'signup',
+    # Terms of service and privacy policy
+    'legal',
 ]
 
 TENANT_APPS = [

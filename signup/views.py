@@ -26,6 +26,12 @@ class SignupSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
     # Honeypot: hidden in the form, so only bots fill it in
     website = serializers.CharField(required=False, allow_blank=True, default='')
+    accept_terms = serializers.BooleanField(help_text='The terms of service and privacy policy were accepted')
+
+    def validate_accept_terms(self, value):
+        if not value:
+            raise serializers.ValidationError('Please accept the terms of service and privacy policy to continue.')
+        return value
 
     def validate_address(self, value):
         return value.strip().lower()
@@ -53,6 +59,7 @@ class SignupView(PublicView):
         data = SignupSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         details = dict(data.validated_data)
+        details.pop('accept_terms')  # required to be true; the accepted versions are recorded
         if details.pop('website'):
             return Response(SENT, status=status.HTTP_201_CREATED)  # a bot: look normal, do nothing
         try:

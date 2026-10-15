@@ -76,10 +76,12 @@ Detailed steps are in the [README](../README.md#deploying-render); this is the c
 
 In this order:
 
-### 2.1 Terms and privacy (needs your wording)
-- [ ] Terms of service and privacy policy pages on the platform site.
-- [ ] Signup requires ticking "I accept the terms", and the acceptance (version and date) is recorded.
-- [ ] Links in the footer and in the signup emails.
+### 2.1 Terms and privacy (the setup is built; the wording needs you)
+- [x] Terms of service and privacy policy pages on the platform site (`/terms`, `/privacy`), edited in the platform admin.
+- [x] Signup requires ticking "I agree", and the accepted versions and date are recorded.
+- [x] Links in the site footer and on the signup form.
+- [x] Starting drafts with `[placeholders]`, shown with a "draft, under legal review" notice. **Not legal advice.**
+- [ ] 🧑 Have a lawyer adapt the drafts. In the platform admin (*Terms and privacy*), add the approved text as a new version, untick "draft", then use the **Publish** action.
 
 ### 2.2 Platform operator dashboard ✅
 - [x] Web screens on the platform site for platform operators only (`/operator`).
