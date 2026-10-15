@@ -143,6 +143,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
 | `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
 | `database_report` | JSON summary per schema (row counts, migrations, audit protection), used to verify backups |
+| `export_hospital --schema <hospital> [--output file.zip]` | All of a hospital's records as a ZIP of CSV files, e.g. for a hospital that has left. Contains patient data: hand it over securely |
 | `process_signups [--retry-failed]` | Finish hospital setups interrupted part-way (e.g. by a deploy) and delete signups never verified. Runs on every deploy |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
 
@@ -199,6 +200,17 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
   - `POST /api/v1/visits/<id>/start/` and `/complete/`, by the assigned doctor
   - `/cancel/`, by the front desk while the patient is still waiting
   - Recording a consultation starts a waiting visit automatically.
+
+### Exporting a hospital's records
+
+Hospital admins can download everything their hospital has recorded under *Settings → Export all records* (`POST /api/v1/hospital/export/` with their `password`).
+
+- **What's in it:** a ZIP with one CSV file per kind of record (users without passwords, patients, appointments, visits, vitals, consultations, diagnoses, prescriptions, lab, pharmacy, billing, insurance, SMS, audit log), plus a README and a manifest of row counts.
+- **Opening it:** the files open in Excel. `<name>_id` columns link rows across files.
+- **Safeguards:** the admin's password is required, and every export (and every refused attempt) is in the audit log. It's limited to 5 per hour (`THROTTLE_EXPORT`).
+- **Formulas:** text a spreadsheet would run as a formula is prefixed with `'`.
+- **Lapsed hospitals:** export still works when a hospital is read-only, because hospitals own their data.
+- **On a hospital's behalf** (e.g. after it leaves): `export_hospital`.
 
 ### Patient SMS
 

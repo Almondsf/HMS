@@ -1,8 +1,10 @@
+import { useMutation } from '@tanstack/react-query'
+import { Download } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
 import { useSaveHospitalSettings } from '@/api/admin'
 import { Badge, Button, Card, ErrorAlert, Input, PageHeader, Spinner, Textarea } from '@/components/ui'
-import { ApiError } from '@/lib/api'
+import { ApiError, downloadFile } from '@/lib/api'
 import { useHospital, type Hospital } from '@/lib/hospital'
 import { titleCase } from '@/lib/format'
 
@@ -159,6 +161,56 @@ function SmsSettings({ hospital }: { hospital: Hospital }) {
   )
 }
 
+function ExportRecords() {
+  const [password, setPassword] = useState('')
+  const exportAll = useMutation({
+    mutationFn: () => downloadFile('/api/v1/hospital/export/', { method: 'POST', body: { password } }),
+    onSuccess: () => setPassword(''),
+  })
+  const errors = exportAll.error instanceof ApiError ? exportAll.error.fieldErrors : {}
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    exportAll.mutate()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-6">
+      <Card className="space-y-4 p-5">
+        <div>
+          <h2 className="font-medium text-slate-900">Export all records</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Download everything your hospital has recorded as spreadsheet (CSV) files in one ZIP: patients, visits,
+            results, prescriptions, invoices and more. Your data is yours to keep or move at any time.
+          </p>
+        </div>
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          The file contains every patient's confidential information. Store it securely and delete it when you're done.
+          Each export is recorded in the audit log.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-64">
+            <Input
+              label="Your password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              error={errors.password}
+            />
+          </div>
+          <Button type="submit" variant="secondary" icon={<Download className="size-4" />} loading={exportAll.isPending}>
+            Download export
+          </Button>
+        </div>
+        <ErrorAlert error={Object.keys(errors).length ? null : exportAll.error} />
+        {exportAll.isSuccess && <p className="text-sm text-emerald-700">Export downloaded.</p>}
+      </Card>
+    </form>
+  )
+}
+
 export function SettingsPage() {
   const { data: hospital, isLoading, error } = useHospital()
   if (isLoading) return <Spinner />
@@ -176,6 +228,7 @@ export function SettingsPage() {
       </Card>
       <SettingsForm hospital={hospital} />
       <SmsSettings hospital={hospital} />
+      <ExportRecords />
     </>
   )
 }

@@ -6,7 +6,7 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework.authentication import SessionAuthentication
 
-from tenants.views import HospitalSettingsView
+from tenants.views import HospitalExportView, HospitalSettingsView
 
 from . import spa
 
@@ -26,6 +26,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path('api/v1/auth/', include('authentication.urls')),
     path('api/v1/hospital/', HospitalSettingsView.as_view(), name='hospital-settings'),
+    path('api/v1/hospital/export/', HospitalExportView.as_view(), name='hospital-export'),
     path('api/v1/subscription/', include('subscriptions.urls')),
     path('api/v1/create-profile/', include('profiles.urls')),
     path('api/v1/', include('clinical.urls')),

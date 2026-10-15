@@ -5,8 +5,8 @@ from django_tenants.utils import get_public_schema_name
 from .models import Subscription
 
 SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
-# Still usable when read-only: signing in and out, passwords, and paying
-ALWAYS_ALLOWED = ('/api/v1/auth/', '/api/auth/', '/api/v1/subscription/', '/admin/')
+# Still usable when read-only: signing in and out, passwords, paying, and taking your data away
+ALWAYS_ALLOWED = ('/api/v1/auth/', '/api/auth/', '/api/v1/subscription/', '/api/v1/hospital/export/', '/admin/')
 
 
 class SubscriptionAccessMiddleware:

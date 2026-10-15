@@ -150,6 +150,27 @@ export async function api<T = unknown>(path: string, options: RequestOptions = {
   return (await response.json()) as T
 }
 
+/** Download a file the API generates (e.g. an export) and save it with the server's file name. */
+export async function downloadFile(path: string, options: RequestOptions = {}): Promise<void> {
+  let response = await send(path, options, session.access)
+  if (response.status === 401 && session.access) {
+    const access = await refreshAccessToken()
+    if (access) response = await send(path, options, access)
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    throw new ApiError(response.status, data)
+  }
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const name = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? 'download'
+  const url = URL.createObjectURL(await response.blob())
+  const link = Object.assign(document.createElement('a'), { href: url, download: name })
+  document.body.append(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 /** DRF's paginated list response. */
 export interface Page<T> {
   count: number

@@ -176,6 +176,7 @@ REST_FRAMEWORK = {
         'login': config('THROTTLE_LOGIN', default='10/min'),
         'password_reset': config('THROTTLE_PASSWORD_RESET', default='5/hour'),
         'signup': config('THROTTLE_SIGNUP', default='5/hour'),
+        'export': config('THROTTLE_EXPORT', default='5/hour'),
     },
 }
 

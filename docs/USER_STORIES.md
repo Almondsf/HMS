@@ -275,6 +275,12 @@ As an admin, I want to see everyone who viewed or changed a patient's record, so
 - Every read and change is recorded with who, when and from where.
 - Nobody, including admins, can edit or delete audit entries.
 
+**ADM-10 ✅ Take our data with us**
+As an admin, I want to download all our records, so that we have our own copy and could move to another system.
+- One ZIP of CSV files that open in Excel, covering patients, visits, results, prescriptions, invoices and more.
+- I must enter my password, and the export is recorded in the audit log.
+- It works even when our subscription has lapsed.
+
 **ADM-7 ✅ Pay for the subscription**
 As an admin, I want to pay for our plan online, monthly or yearly, so that the hospital keeps full access.
 - Payment is by Paystack; renewal is automatic.

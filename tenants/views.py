@@ -1,5 +1,8 @@
+import tempfile
+
 from django.core.exceptions import ValidationError
 from django.db import connection, transaction
+from django.http import FileResponse
 from django.utils import timezone
 from django_tenants.utils import get_public_schema_name
 from rest_framework import generics, mixins, serializers, viewsets
@@ -7,15 +10,17 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from audit.recorder import Category, record
 from authentication.permissions import Role, allow_roles
 from signup import services as signups
 from signup.models import Signup
 from subscriptions import services as subscriptions
 from subscriptions.views import PaymentSerializer
 
-from . import platform
+from . import export, platform
 from .models import Hospital
 from .serializers import (
     HospitalProvisionSerializer,
@@ -150,3 +155,33 @@ class HospitalSettingsView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return Hospital.objects.prefetch_related('domains').get(pk=connection.tenant.pk)
+
+
+class ExportPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(trim_whitespace=False)
+
+
+class HospitalExportView(APIView):
+    '''
+    Download all of the hospital's records (ZIP of CSV files). Admins only,
+    with their password: it is every patient's data in one file. Audited.
+    '''
+
+    permission_classes = [allow_roles(write=[Role.ADMIN])]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'export'
+
+    def post(self, request):
+        data = ExportPasswordSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        if not request.user.check_password(data.validated_data['password']):
+            record('data.export_refused', Category.SECURITY, metadata={'reason': 'wrong password'})
+            raise ValidationError({'password': 'Incorrect password.'})
+        hospital = Hospital.objects.get(pk=connection.tenant.pk)
+        archive = tempfile.SpooledTemporaryFile(max_size=50 * 1024 * 1024)
+        counts = export.write_export(archive, hospital)
+        archive.seek(0)
+        record('data.exported', Category.SECURITY, metadata={'rows': sum(counts.values()), 'files': len(counts)})
+        return FileResponse(
+            archive, as_attachment=True, filename=export.filename(hospital), content_type='application/zip'
+        )

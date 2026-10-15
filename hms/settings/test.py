@@ -14,6 +14,7 @@ REST_FRAMEWORK = {
         'login': '10000/min',
         'password_reset': '10000/min',
         'signup': '10000/min',
+        'export': '10000/min',
     },
 }
 

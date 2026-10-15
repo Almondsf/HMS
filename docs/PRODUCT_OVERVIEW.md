@@ -163,7 +163,11 @@ Key ideas:
 - **Lab:** volumes, turnaround time, pending work.
 - Any date range up to a year, in hospital time. Every chart has a table view.
 
-### 5.11 Audit trail
+### 5.11 Data export
+- A hospital admin can download all of the hospital's records at any time, even when the subscription has lapsed: a ZIP of CSV files that open in Excel.
+- Requires the admin's password and is recorded in the audit log. Passwords are never exported.
+
+### 5.11b Audit trail
 - **Every change** to clinical, billing and other records, **every read of patient data**, and **every security event** (sign-ins, lockouts, resets) is recorded with who, what, when, IP and request id.
 - **Append-only:** the database itself refuses to edit or delete audit rows.
 - An admin can answer "**who has looked at this patient's record?**", which is a core requirement of health-data laws such as the NDPA.
@@ -314,7 +318,7 @@ AuditEvent (append-only, references any of the above)
 |---|---|
 | Patient-facing web or mobile app | Not started; the API already supports patient logins |
 | Inpatient care (wards, beds, admissions), theatre, maternity | Not started |
-| Enterprise features (SSO, multi-branch, data export, custom domains) | Phase 5 |
+| Enterprise features (SSO, multi-branch, custom domains) | Phase 5 |
 
 ---
 
