@@ -129,9 +129,12 @@ class BookingConfirmationTests(SmsTestCase):
         self.assertIn('at 14:00', SmsMessage.objects.first().body)
 
     def test_monthly_limit_caps_cost(self):
+        second = make_user(Role.PATIENT)
+        second.phone_number = '08039876543'
+        second.save()
         with override_settings(SMS_MONTHLY_LIMIT_PER_HOSPITAL=1):
             self.book(self.tomorrow_at(10))
-            self.book(self.tomorrow_at(11), patient=make_user(Role.PATIENT))
+            self.book(self.tomorrow_at(11), patient=second)
         latest = SmsMessage.objects.first()
         self.assertEqual(latest.status, SmsMessage.Status.SKIPPED)
         self.assertIn('limit', latest.error)
