@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from subscriptions import paystack
@@ -21,7 +22,10 @@ class Command(BaseCommand):
         for price in prices:
             try:
                 plan = paystack.create_plan(
-                    name=f'HMS {price.plan.title()} ({price.interval}, {price.currency} {price.amount:,.0f})',
+                    name=(
+                        f'{settings.PRODUCT_NAME} {price.plan.title()} '
+                        f'({price.interval}, {price.currency} {price.amount:,.0f})'
+                    ),
                     interval=price.interval,
                     amount_kobo=price.amount_kobo,
                     currency=price.currency,

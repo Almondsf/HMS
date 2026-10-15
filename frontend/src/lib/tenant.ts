@@ -8,6 +8,8 @@
  */
 
 interface RuntimeConfig {
+  /** The product's name (PRODUCT_NAME), e.g. on the platform site */
+  productName?: string
   tenantBaseDomain?: string
   /** API address; '' = same origin. May contain {hospital}. */
   apiUrl?: string
@@ -62,9 +64,14 @@ export function tenantBaseDomain(): string {
   return BASE_DOMAIN
 }
 
+/** The product's name, set by the PRODUCT_NAME setting (VITE_PRODUCT_NAME in development). */
+export function productName(): string {
+  return runtime.productName || import.meta.env.VITE_PRODUCT_NAME || 'HMS'
+}
+
 /** A readable name from the address until the real one loads after sign-in: st-lukes -> "St Lukes". */
 export function hospitalDisplayName(hospital = currentHospital()): string {
-  if (!hospital) return 'HMS'
+  if (!hospital) return productName()
   return hospital
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

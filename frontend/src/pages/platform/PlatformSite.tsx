@@ -1,5 +1,5 @@
 /**
- * The platform site (the bare domain, e.g. hms.app): what HMS is, prices,
+ * The platform site (the bare domain, e.g. hms.app): what the product is, prices,
  * self-serve signup, and a way to find your hospital's own address.
  */
 import {
@@ -20,7 +20,7 @@ import { Link, Navigate, Route, Routes } from 'react-router'
 import { usePlans } from '@/api/signup'
 import { Button, Card, Input } from '@/components/ui'
 import { formatMoney } from '@/lib/hospital'
-import { hospitalAppUrl, tenantBaseDomain } from '@/lib/tenant'
+import { hospitalAppUrl, productName, tenantBaseDomain } from '@/lib/tenant'
 
 import { PLANS } from './plans'
 import { SignupPage, VerifySignupPage } from './SignupPages'
@@ -33,7 +33,7 @@ function Logo() {
           <path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" />
         </svg>
       </span>
-      <span className="font-semibold text-slate-900">HMS</span>
+      <span className="font-semibold text-slate-900">{productName()}</span>
     </Link>
   )
 }
@@ -62,7 +62,7 @@ function SiteLayout({ children }: { children: ReactNode }) {
       </header>
       <main className="flex-1">{children}</main>
       <footer className="border-t border-slate-100 py-8 text-center text-sm text-slate-500">
-        © {new Date().getFullYear()} HMS · Hospital management for clinics and hospitals
+        © {new Date().getFullYear()} {productName()} · Hospital management for clinics and hospitals
       </footer>
     </div>
   )
@@ -233,7 +233,7 @@ function FindHospitalPage() {
         </Button>
       </form>
       <p className="mt-6 text-sm text-slate-600">
-        Not on HMS yet?{' '}
+        Not on {productName()} yet?{' '}
         <Link to="/signup" className="font-medium text-brand-600 hover:text-brand-700">
           Start a free trial
         </Link>

@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** The product's name in development (production uses the PRODUCT_NAME setting). */
+  readonly VITE_PRODUCT_NAME?: string
   /** Domain hospitals live under, e.g. "hms.app" (default "localhost"). */
   readonly VITE_TENANT_BASE_DOMAIN?: string
   /** API address; may contain {hospital}. Empty string = same origin. */

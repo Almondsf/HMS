@@ -13,9 +13,9 @@ from . import spa
 # Docs are open in development; in production only staff signed in to the admin can view them
 schema_view = get_schema_view(
     openapi.Info(
-        title="HMS API",
+        title=f'{settings.PRODUCT_NAME} API',
         default_version='v1',
-        description="Hospital Management System API",
+        description='Hospital management API',
     ),
     public=settings.API_DOCS_PUBLIC,
     authentication_classes=(SessionAuthentication,),

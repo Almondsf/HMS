@@ -222,6 +222,9 @@ LOGIN_LOCKOUT_MINUTES = config('LOGIN_LOCKOUT_MINUTES', default=15, cast=int)
 
 # Password reset links expire after an hour (Django's default is 3 days)
 PASSWORD_RESET_TIMEOUT = 60 * 60
+# The product's name, shown on the platform site, in emails, the admin and API docs
+PRODUCT_NAME = config('PRODUCT_NAME', default='HMS')
+
 # Where reset links point. Blank = the hospital's own address (the app is served there).
 # May use {subdomain} or {host}, e.g. http://{subdomain}.localhost:5173 in development.
 FRONTEND_URL = config('FRONTEND_URL', default='')
@@ -234,7 +237,7 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_TIMEOUT = 10
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='HMS <no-reply@localhost>')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=f'{PRODUCT_NAME} <no-reply@localhost>')
 
 # Obscure the admin path in production (e.g. ADMIN_URL=staff-portal-8f3a/)
 ADMIN_URL = config('ADMIN_URL', default='admin/')

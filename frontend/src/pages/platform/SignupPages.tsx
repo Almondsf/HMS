@@ -13,7 +13,7 @@ import {
 import { Button, Card, cx, ErrorAlert, Input } from '@/components/ui'
 import { ApiError } from '@/lib/api'
 import { formatMoney, type Hospital } from '@/lib/hospital'
-import { tenantBaseDomain } from '@/lib/tenant'
+import { productName, tenantBaseDomain } from '@/lib/tenant'
 
 import { PLANS } from './plans'
 
@@ -253,7 +253,7 @@ export function SignupPage() {
         <ErrorAlert error={Object.keys(errors).length ? null : signup.error} />
         <div className="flex flex-col-reverse items-center justify-between gap-4 sm:flex-row">
           <p className="text-sm text-slate-600">
-            Already on HMS?{' '}
+            Already on {productName()}?{' '}
             <Link to="/sign-in" className="font-medium text-brand-600 hover:text-brand-700">
               Sign in
             </Link>

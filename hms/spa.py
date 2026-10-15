@@ -24,6 +24,7 @@ def _index_html():
         {
             'tenantBaseDomain': settings.TENANT_BASE_DOMAIN,
             'apiUrl': '',
+            'productName': settings.PRODUCT_NAME,
             'sentryDsn': settings.SENTRY_FRONTEND_DSN,
             'environment': settings.SENTRY_ENVIRONMENT,
         }

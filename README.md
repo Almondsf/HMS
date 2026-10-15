@@ -2,7 +2,7 @@
 
 A multi-hospital Django REST backend for running clinics and hospitals: patient registration, visits, consultations (SOAP notes), prescriptions, laboratory and pharmacy, with role-based access and a full audit trail. One deployment serves many hospitals, and each hospital's data lives in its own isolated database schema.
 
-**New here?** Start with the [product and system overview](docs/PRODUCT_OVERVIEW.md) (what the app does and how it's built) and the [user stories](docs/USER_STORIES.md) (what each kind of user needs). This README is the setup and API reference.
+**New here?** Start with the [product and system overview](docs/PRODUCT_OVERVIEW.md) (what the app does and how it's built) and the [user stories](docs/USER_STORIES.md) (what each kind of user needs). The [launch plan](docs/LAUNCH_PLAN.md) lists the next steps. This README is the setup and API reference.
 
 ## Modules
 
@@ -375,6 +375,8 @@ Logs are JSON lines in production and readable text locally (`LOG_FORMAT`). Ever
 | `hms.settings.dev` | `manage.py` locally (default) |
 | `hms.settings.prod` | `wsgi`/`asgi`, and `manage.py` on Render |
 | `hms.settings.test` | pytest |
+
+The product's name on the website, emails, admin and API docs comes from `PRODUCT_NAME` (default `HMS`), so renaming needs no code change.
 
 Production refuses to start without a real `SECRET_KEY` and explicit `ALLOWED_HOSTS`. It forces HTTPS, sends HSTS headers and uses secure cookies. All variables are documented in [.env.example](.env.example).
 

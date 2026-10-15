@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/format'
 import { useHospital } from '@/lib/hospital'
 import { visibleNavItems } from '@/lib/navigation'
 import { ROLE_LABELS } from '@/lib/roles'
+import { productName } from '@/lib/tenant'
 
 function Logo({ name }: { name?: string }) {
   return (
@@ -18,7 +19,7 @@ function Logo({ name }: { name?: string }) {
         </svg>
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-slate-900">{name ?? 'HMS'}</p>
+        <p className="truncate text-sm font-semibold text-slate-900">{name ?? productName()}</p>
         <p className="text-xs text-brand-600">Hospital Management</p>
       </div>
     </div>

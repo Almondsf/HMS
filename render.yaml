@@ -29,6 +29,8 @@ services:
         sync: false # e.g. yourdomain.com -> hospitals at <name>.yourdomain.com
       - key: PLATFORM_DOMAINS
         sync: false # e.g. yourdomain.com (Render's own hostname is added automatically)
+      - key: PRODUCT_NAME
+        sync: false # your product's name, shown on the website and in emails (default HMS)
       - key: LOG_FORMAT
         value: json
       # Error monitoring (optional): create two Sentry projects, Django and React

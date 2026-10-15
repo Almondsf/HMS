@@ -103,7 +103,8 @@ def request_signup(*, hospital_name, address, plan, first_name, last_name, email
                 f'Thanks for signing up {hospital_name}. Confirm your email address to create your hospital '
                 f'(the link works for {LINK_VALID_FOR.days * 24} hours):\n\n'
                 f'{verify_url(token)}\n\n'
-                "If you didn't sign up, ignore this email and nothing will be created."
+                "If you didn't sign up, ignore this email and nothing will be created.\n\n"
+                f'The {settings.PRODUCT_NAME} team'
             ),
             from_email=None,
             recipient_list=[email],
@@ -203,7 +204,8 @@ def provision(signup_id):
                 f'of the {signup.plan.title()} plan.\n\n'
                 f'Your hospital\'s address: {signup.login_url}\n'
                 f'Sign in with {signup.email} and the password you chose.\n\n'
-                'Next steps: add your staff (Staff), set your prices (Fees) and check your settings.'
+                'Next steps: add your staff (Staff), set your prices (Fees) and check your settings.\n\n'
+                f'The {settings.PRODUCT_NAME} team'
             ),
             from_email=None,
             recipient_list=[signup.email],

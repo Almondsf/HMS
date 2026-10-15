@@ -76,7 +76,7 @@ def request_reset(*, email, request):
     if user is None or not user.has_usable_password():
         record('password_reset_requested', Category.SECURITY, metadata={'email': email, 'account': False})
         return
-    hospital = getattr(connection.tenant, 'name', 'HMS')
+    hospital = getattr(connection.tenant, 'name', settings.PRODUCT_NAME)
     send_mail(
         subject=f'Reset your {hospital} password',
         message=(
