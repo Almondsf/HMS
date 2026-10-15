@@ -81,12 +81,12 @@ In this order:
 - [ ] Signup requires ticking "I accept the terms", and the acceptance (version and date) is recorded.
 - [ ] Links in the footer and in the signup emails.
 
-### 2.2 Platform operator dashboard
-- [ ] Web screens on the platform site for platform operators only.
-- [ ] Every hospital: plan, status, trial or renewal date, last activity.
-- [ ] Lists that need attention: trials ending this week, overdue payments, recent signups (including failed ones).
-- [ ] Revenue this month and per plan.
-- [ ] Actions: record a bank transfer, change plan, extend a trial, suspend or reactivate.
+### 2.2 Platform operator dashboard ✅
+- [x] Web screens on the platform site for platform operators only (`/operator`).
+- [x] Every hospital: plan, status, trial or renewal date, last activity.
+- [x] Lists that need attention: trials ending this week, overdue payments, recent signups (including failed ones).
+- [x] Revenue this month and per month, and monthly recurring revenue.
+- [x] Actions: record a bank transfer, change plan, extend a trial, suspend or reactivate.
 
 ### 2.3 SMS appointment reminders (needs the SMS provider account)
 - [ ] Reminder the day before each appointment, and optionally on booking.

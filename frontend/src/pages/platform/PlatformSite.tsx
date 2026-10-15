@@ -14,11 +14,11 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { Link, Navigate, Route, Routes } from 'react-router'
+import { lazy, Suspense, useState, type FormEvent } from 'react'
+import { Link, Navigate, Outlet, Route, Routes } from 'react-router'
 
 import { usePlans } from '@/api/signup'
-import { Button, Card, Input } from '@/components/ui'
+import { Button, Card, Input, Spinner } from '@/components/ui'
 import { formatMoney } from '@/lib/hospital'
 import { hospitalAppUrl, productName, tenantBaseDomain } from '@/lib/tenant'
 
@@ -38,7 +38,10 @@ function Logo() {
   )
 }
 
-function SiteLayout({ children }: { children: ReactNode }) {
+// The operator dashboard is only for platform staff: keep it out of visitors' downloads
+const OperatorApp = lazy(() => import('./operator/OperatorApp').then((module) => ({ default: module.OperatorApp })))
+
+function SiteLayout() {
   return (
     <div className="flex min-h-full flex-col bg-white">
       <header className="border-b border-slate-100">
@@ -60,7 +63,9 @@ function SiteLayout({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <Outlet />
+      </main>
       <footer className="border-t border-slate-100 py-8 text-center text-sm text-slate-500">
         © {new Date().getFullYear()} {productName()} · Hospital management for clinics and hospitals
       </footer>
@@ -244,14 +249,22 @@ function FindHospitalPage() {
 
 export function PlatformSite() {
   return (
-    <SiteLayout>
-      <Routes>
+    <Routes>
+      <Route
+        path="operator/*"
+        element={
+          <Suspense fallback={<Spinner />}>
+            <OperatorApp />
+          </Suspense>
+        }
+      />
+      <Route element={<SiteLayout />}>
         <Route index element={<LandingPage />} />
         <Route path="signup" element={<SignupPage />} />
         <Route path="signup/verify" element={<VerifySignupPage />} />
         <Route path="sign-in" element={<FindHospitalPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </SiteLayout>
+      </Route>
+    </Routes>
   )
 }

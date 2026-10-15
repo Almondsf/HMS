@@ -238,6 +238,26 @@ def record_manual_payment(*, hospital, plan, interval, amount, reference, note, 
     return payment
 
 
+@transaction.atomic
+def extend_access(*, hospital, days, reason, by):
+    '''
+    A platform operator gives a hospital extra days (a longer trial, or
+    goodwill while a payment is sorted out). Counts from the current end, or
+    from today if that has passed.
+    '''
+    subscription = Subscription.objects.select_for_update().filter(hospital=hospital).first() or start_trial(hospital)
+    starts = max(timezone.now(), subscription.current_period_end)
+    subscription.current_period_end = starts + timedelta(days=days)
+    if subscription.status == Subscription.Status.PAST_DUE:
+        subscription.status = Subscription.Status.ACTIVE
+    subscription.save()
+    record(
+        'subscription.extended', Category.DOMAIN, resource=subscription,
+        metadata={'days': days, 'reason': reason, 'by': by.email, 'until': subscription.current_period_end.isoformat()},
+    )  # fmt: skip
+    return subscription
+
+
 def describe(subscription, now=None):
     '''What the hospital (and the web app's banner) needs to know.'''
     now = now or timezone.now()

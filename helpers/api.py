@@ -87,7 +87,11 @@ def app_url(request, path):
     otherwise (e.g. the Vite dev server: http://{subdomain}.localhost:5173).
     """
     from django.conf import settings
+    from django.db import connection
+    from django_tenants.utils import get_public_schema_name
 
+    if connection.schema_name == get_public_schema_name():
+        return platform_url(request, path)  # e.g. a platform operator's password reset
     host = request.get_host()
     if settings.FRONTEND_URL:
         base = settings.FRONTEND_URL.format(subdomain=host.split('.')[0], host=host)

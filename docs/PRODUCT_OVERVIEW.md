@@ -174,8 +174,13 @@ Key ideas:
 - The platform site also has a landing page with live prices, and a "Sign in" page that sends people to their hospital's address.
 
 ### 5.13 Platform (for the operator)
-- Provision a hospital: its database schema, web address and first admin account.
-- Change a hospital's plan, suspend it, record bank-transfer payments, and edit prices.
+- **Operator dashboard** at `/operator` on the platform site:
+  - monthly recurring revenue, money collected per month, and hospitals by state (trial, paying, overdue, lapsed, suspended)
+  - who needs attention: trials ending this week, overdue hospitals, lapsed hospitals, stuck signups
+  - each hospital's usage (staff, patients, visits, last activity) and payments
+  - signups and their outcome
+- Actions: give extra days, record a bank-transfer payment, change plan, suspend or reactivate, retry a failed signup.
+- Provision a hospital directly (API or command), and edit prices (platform admin).
 - Paystack webhook for renewals, failed payments and cancellations.
 
 ---
@@ -305,7 +310,6 @@ AuditEvent (append-only, references any of the above)
 
 | Item | Status |
 |---|---|
-| Platform operator dashboard (web screens; today it's the API plus Django admin) | Next up |
 | SMS appointment reminders | Planned (will subscribe to scheduling events) |
 | Patient-facing web or mobile app | Not started; the API already supports patient logins |
 | Inpatient care (wards, beds, admissions), theatre, maternity | Not started |

@@ -54,6 +54,8 @@ class UserSerializer(serializers.ModelSerializer):
     '''The signed-in user's own account details.'''
 
     full_name = serializers.CharField(source='get_full_name', read_only=True)
+    # True only on the platform site, for its superusers: opens the operator dashboard
+    is_platform_operator = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -73,8 +75,15 @@ class UserSerializer(serializers.ModelSerializer):
             'last_login',
             'date_joined',
             'must_change_password',
+            'is_platform_operator',
         ]
         read_only_fields = ['id', 'email', 'user_type', 'last_login', 'date_joined', 'must_change_password']
+
+    def get_is_platform_operator(self, user):
+        from django.db import connection
+        from django_tenants.utils import get_public_schema_name
+
+        return user.is_superuser and connection.schema_name == get_public_schema_name()
 
 
 class LoginSerializer(TokenObtainPairSerializer):

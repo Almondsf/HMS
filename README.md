@@ -105,6 +105,15 @@ Each hospital is a **tenant** with its own Postgres schema ([django-tenants](htt
 | `POST /api/v1/platform/hospitals/` | Provision a hospital. Takes `name`, `schema_name`, `plan` and `admin_*` fields; returns the admin's one-time password if none was given |
 | `GET /api/v1/platform/hospitals/` | List hospitals with their domains, plans and status |
 | `PATCH /api/v1/platform/hospitals/<id>/` | Change plan or settings; `is_active: false` suspends the hospital |
+| `GET /api/v1/platform/hospitals/<id>/` | One hospital, with its usage (staff, patients, recent visits, last activity) and payments. The list takes `?search=` |
+| `POST /api/v1/platform/hospitals/<id>/extend/` | Give 1-90 extra days of access (`days`, `reason`); audited |
+| `GET /api/v1/platform/overview/` | Hospitals by state, monthly recurring revenue, money collected per month, and who needs attention |
+| `GET /api/v1/platform/signups/` | Signups (`?status=`, `?search=`); `POST .../<id>/retry/` retries a failed or stuck one |
+
+**Operator dashboard:** the same things as web screens, at `https://<platform domain>/operator`. Sign in with a platform superuser (create one with `python manage.py createsuperuser` on the platform). It shows:
+- the overview: revenue, trials ending this week, overdue and lapsed hospitals
+- every hospital, with its usage, payments and actions: extend access, record a bank transfer, change plan, suspend or reactivate
+- every signup, with a retry for failed ones
 
 **Hospital settings:** `GET/PATCH /api/v1/hospital/` on the hospital's own site. Everyone signed in can read them; admins edit:
 - `name`, `contact_email`, `phone`, `address`

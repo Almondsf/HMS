@@ -13,6 +13,8 @@ export interface CurrentUser {
   full_name: string
   user_type: Role
   must_change_password: boolean
+  /** Platform site superusers: may open the operator dashboard */
+  is_platform_operator?: boolean
 }
 
 interface AuthState {

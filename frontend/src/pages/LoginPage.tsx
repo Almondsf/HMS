@@ -5,11 +5,21 @@ import { Button, ErrorAlert, Input } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { hospitalDisplayName } from '@/lib/tenant'
 
-export function LoginPage() {
+export function LoginPage({
+  home = '/',
+  title,
+  allowReset = true,
+}: {
+  /** Where to go after signing in, unless the person was sent here from a page */
+  home?: string
+  title?: string
+  /** Offer "Forgot password?" (hospital sites); platform operators reset from the server */
+  allowReset?: boolean
+} = {}) {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const hospitalName = hospitalDisplayName()
+  const hospitalName = title ?? hospitalDisplayName()
   // Prefilled when arriving from the signup page
   const [email, setEmail] = useState(() => new URLSearchParams(location.search).get('email') ?? '')
   const [password, setPassword] = useState('')
@@ -17,7 +27,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const state = location.state as { from?: string; notice?: string } | null
-  const returnTo = state?.from ?? '/'
+  const returnTo = state?.from ?? home
   if (user) return <Navigate to={returnTo} replace />
 
   async function handleSubmit(event: FormEvent) {
@@ -77,11 +87,13 @@ export function LoginPage() {
           <Button type="submit" loading={submitting} className="w-full">
             Sign in
           </Button>
-          <p className="text-center text-sm">
-            <Link to="/forgot-password" className="text-brand-600 hover:text-brand-700">
-              Forgot password?
-            </Link>
-          </p>
+          {allowReset && (
+            <p className="text-center text-sm">
+              <Link to="/forgot-password" className="text-brand-600 hover:text-brand-700">
+                Forgot password?
+              </Link>
+            </p>
+          )}
         </form>
       </div>
     </div>

@@ -326,8 +326,14 @@ As the platform operator, I want to record a payment made by bank transfer, so t
 **PLT-5 ✅ Trustworthy payments**
 As the platform operator, I want every payment verified with Paystack and every webhook signature checked, so that nobody gets free access by faking a payment.
 
-**PLT-6 🔜 Platform dashboard**
+**PLT-6 ✅ Platform dashboard**
 As the platform operator, I want web screens showing hospitals, trials ending, overdue payments and revenue, so that I don't need the API or Django admin.
+- The overview shows monthly recurring revenue, money collected per month, and hospitals by state.
+- "Needs attention" lists trials ending this week, overdue hospitals and lapsed hospitals.
+- Each hospital shows its usage (staff, patients, recent visits, last activity), so I can spot hospitals that signed up but never started.
+- From a hospital I can give extra days, record a bank transfer, change its plan, or suspend it.
+- I can see every signup and retry one that failed.
+- Only platform superusers can open it.
 
 ---
 
