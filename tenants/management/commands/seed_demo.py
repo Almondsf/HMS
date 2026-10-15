@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -331,6 +332,7 @@ class Command(BaseCommand):
             with transaction.atomic():
                 self.seed()
                 RecordSequence.objects.create(name=SEED_MARKER, last_value=1)
+        call_command('seed_notifications', schema=schema, stdout=self.stdout)
         self.stdout.write(
             self.style.SUCCESS(f'Demo data loaded into {hospital.name}. Credentials: DEMO_CREDENTIALS.md')
         )

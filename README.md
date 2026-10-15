@@ -147,6 +147,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `run_hourly` | The hourly cron job: SMS appointment reminders and subscription notices to hospital admins |
 | `export_hospital --schema <hospital> [--output file.zip]` | All of a hospital's records as a ZIP of CSV files, e.g. for a hospital that has left. Contains patient data: hand it over securely |
 | `process_signups [--retry-failed]` | Finish hospital setups interrupted part-way (e.g. by a deploy) and delete signups never verified. Runs on every deploy |
+| `seed_notifications --schema <hospital> [--reset]` | **Demo only:** fill a demo hospital's notification centres with realistic notifications from its records (run by `seed_demo`; refuses hospitals without demo data) |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
 
 ## Roles and access

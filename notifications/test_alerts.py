@@ -2,7 +2,7 @@ from datetime import timedelta
 from io import StringIO
 from unittest.mock import patch
 
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.utils import timezone
 from rest_framework import status
 
@@ -14,8 +14,10 @@ from helpers.testing import TenantAPITestCase, make_user
 from lab import services as lab
 from lab.models import LabTest
 from pharmacy.models import Drug
+from profiles.models import RecordSequence
 from subscriptions import services as subscriptions
 from subscriptions.models import Subscription
+from tenants.management.commands.seed_demo import SEED_MARKER
 
 from . import inbox
 from .models import Notification
@@ -146,6 +148,21 @@ class NotificationApiTests(AlertTestCase):
         subscriptions.start_trial(self.tenant)
         Subscription.objects.filter(hospital=self.tenant).update(current_period_end=timezone.now() - timedelta(days=60))
         self.assertEqual(self.client.post('/api/v1/notifications/read-all/').status_code, status.HTTP_200_OK)
+
+
+class SeedNotificationsTests(AlertTestCase):
+    def test_refuses_hospitals_without_demo_data(self):
+        with self.assertRaisesMessage(CommandError, 'no demo data'):
+            call_command('seed_notifications', schema=self.tenant.schema_name, stdout=StringIO())
+        self.assertFalse(Notification.objects.exists())
+
+    def test_fills_a_demo_hospital_through_the_real_handlers(self):
+        RecordSequence.objects.create(name=SEED_MARKER, last_value=1)
+        self.open_visit()
+        Notification.objects.all().delete()
+        call_command('seed_notifications', schema=self.tenant.schema_name, stdout=StringIO())
+        self.assertTrue(any('is waiting to see you' in n.title for n in self.inbox_of(self.doctor)))
+        self.assertEqual(len(self.inbox_of(self.admin)), 1)  # the trial notice
 
 
 class SubscriptionNoticeTests(AlertTestCase):
