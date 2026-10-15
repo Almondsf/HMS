@@ -327,6 +327,7 @@ AuditEvent (append-only, references any of the above)
 
 | Item | Status |
 |---|---|
+| Notifications by email or phone push (in-app is built) | Next candidate; would reuse the same rules |
 | Patient-facing web or mobile app | Not started; the API already supports patient logins |
 | Inpatient care (wards, beds, admissions), theatre, maternity | Not started |
 | Enterprise features (SSO, multi-branch, custom domains) | Phase 5 |

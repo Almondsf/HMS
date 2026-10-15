@@ -2,7 +2,7 @@
 
 A multi-hospital Django REST backend for running clinics and hospitals: patient registration, visits, consultations (SOAP notes), prescriptions, laboratory and pharmacy, with role-based access and a full audit trail. One deployment serves many hospitals, and each hospital's data lives in its own isolated database schema.
 
-**New here?** Start with the [product and system overview](docs/PRODUCT_OVERVIEW.md) (what the app does and how it's built) and the [user stories](docs/USER_STORIES.md) (what each kind of user needs). The [launch plan](docs/LAUNCH_PLAN.md) lists the next steps. This README is the setup and API reference.
+**New here?** Start with the [product and system overview](docs/PRODUCT_OVERVIEW.md) (what the app does and how it's built) and the [user stories](docs/USER_STORIES.md) (what each kind of user needs). To run or host it, see [running and hosting](docs/RUNNING_AND_HOSTING.md). The [launch plan](docs/LAUNCH_PLAN.md) lists the next steps. This README is the feature and API reference.
 
 ## Modules
 
@@ -22,6 +22,8 @@ A multi-hospital Django REST backend for running clinics and hospitals: patient 
 | `reports` | Clinical, financial, pharmacy and lab management reports |
 
 ## Quick start
+
+The full guide, including demo data, the web app, hosting on Render and troubleshooting, is [docs/RUNNING_AND_HOSTING.md](docs/RUNNING_AND_HOSTING.md).
 
 **With Docker** (Postgres included):
 
@@ -472,6 +474,8 @@ CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push and
 Optional local hooks: `pip install pre-commit && pre-commit install`.
 
 ## Deploying (Render)
+
+Step by step, with every setting and day-to-day operations: [docs/RUNNING_AND_HOSTING.md](docs/RUNNING_AND_HOSTING.md#3-host-it-on-render). In short:
 
 Production runs as **one Docker service** ([Dockerfile](Dockerfile)): it builds the web app, and Django serves it at each hospital's address next to the API. That means the same origin, no CORS setup, and a first-party session cookie. The service is described in [render.yaml](render.yaml).
 

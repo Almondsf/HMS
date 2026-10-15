@@ -29,7 +29,7 @@ These block other steps, so settle them early.
 
 ## Stage 1: Get live 🧑
 
-Detailed steps are in the [README](../README.md#deploying-render); this is the checklist.
+Step-by-step instructions are in [RUNNING_AND_HOSTING.md](RUNNING_AND_HOSTING.md#3-host-it-on-render); this is the checklist.
 
 ### 1.1 Domain and hosting
 - [ ] Buy the domain.
@@ -101,7 +101,14 @@ In this order:
 - [ ] 🧑 Open a Termii or Africa's Talking account, register a sender ID, and set `SMS_BACKEND`, `SMS_API_KEY` (and `SMS_USERNAME` for Africa's Talking) and `SMS_SENDER_ID` on Render.
 - [ ] 🧑 Decide whether SMS is included in plans (as now, up to the cap) or charged per message.
 
-### 2.4 Polish from your click-through 🤝
+### 2.4 Also built ✅
+- [x] Product name as a setting (`PRODUCT_NAME`).
+- [x] Data export for hospitals, and patient import from Excel/CSV.
+- [x] Notification centre for staff (the bell), with demo notifications.
+- [x] `launch_check` to verify a deployment is ready.
+- [x] [RUNNING_AND_HOSTING.md](RUNNING_AND_HOSTING.md): running, hosting and operating guide.
+
+### 2.5 Polish from your click-through 🤝
 - [ ] Click through every screen as each role (the demo logins are in `DEMO_CREDENTIALS.md`) and note anything confusing. Each note becomes a fix.
 
 **Stage 2 is done when** all of the above are merged with CI passing.
