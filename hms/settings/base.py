@@ -52,6 +52,8 @@ SHARED_APPS = [
     'signup',
     # Terms of service and privacy policy
     'legal',
+    # Which company delivers email and SMS (switchable at runtime)
+    'providers',
 ]
 
 TENANT_APPS = [
@@ -234,7 +236,10 @@ PRODUCT_NAME = config('PRODUCT_NAME', default='HMS')
 FRONTEND_URL = config('FRONTEND_URL', default='')
 
 # Email (password resets). Any SMTP provider works: Brevo, Mailgun, SES, Postmark, Resend...
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+# All email goes through the active provider (operator dashboard → Providers); without one,
+# through FALLBACK_EMAIL_BACKEND, configured with the settings below.
+EMAIL_BACKEND = 'providers.email.ProviderEmailBackend'
+FALLBACK_EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
@@ -376,16 +381,21 @@ SUBSCRIPTION_TRIAL_DAYS = config('SUBSCRIPTION_TRIAL_DAYS', default=14, cast=int
 SUBSCRIPTION_GRACE_DAYS = config('SUBSCRIPTION_GRACE_DAYS', default=7, cast=int)
 
 # SMS to patients (appointment confirmations and reminders); see helpers/sms.py.
-# SMS_BACKEND: '' (off), 'console', 'termii' or 'africastalking'
+# Normally chosen in the operator dashboard (Providers); these are the fallback.
+# SMS_BACKEND: '' (off), 'console' or 'termii'
 SMS_BACKEND = config('SMS_BACKEND', default='')
 SMS_API_KEY = config('SMS_API_KEY', default='')
-SMS_USERNAME = config('SMS_USERNAME', default='')  # Africa's Talking app username
 SMS_API_URL = config('SMS_API_URL', default='')  # Termii: your account's base URL, if not the default
 SMS_SENDER_ID = config('SMS_SENDER_ID', default='')  # registered with the provider; hospitals may set their own
 SMS_DEFAULT_COUNTRY_CODE = config('SMS_DEFAULT_COUNTRY_CODE', default='234')  # for numbers written 0803...
 SMS_MONTHLY_LIMIT_PER_HOSPITAL = config('SMS_MONTHLY_LIMIT_PER_HOSPITAL', default=500, cast=int)
 SMS_REMINDER_HOUR = config('SMS_REMINDER_HOUR', default=9, cast=int)  # hospital time, the day before
 SMS_SEND_IN_BACKGROUND = config('SMS_SEND_IN_BACKGROUND', default=True, cast=bool)
+
+# Encrypts the provider API keys saved in the operator dashboard. Generate once with
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# and never change it casually: saved keys would have to be entered again.
+PROVIDER_ENCRYPTION_KEY = config('PROVIDER_ENCRYPTION_KEY', default='')
 
 # Self-serve signup creates the hospital in a background thread (it takes longer
 # than a request may run); `manage.py process_signups` finishes interrupted ones

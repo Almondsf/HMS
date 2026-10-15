@@ -16,6 +16,7 @@ import { LoginPage } from '@/pages/LoginPage'
 
 import { HospitalDetailPage, HospitalsPage } from './HospitalPages'
 import { naira, STATE_LABELS } from './shared'
+import { ProvidersPage } from './ProvidersPage'
 import { SignupsPage } from './SignupsPage'
 
 function RequireOperator({ children }: { children: ReactNode }) {
@@ -44,6 +45,7 @@ const TABS = [
   { to: '/operator', label: 'Overview', end: true },
   { to: '/operator/hospitals', label: 'Hospitals', end: false },
   { to: '/operator/signups', label: 'Signups', end: false },
+  { to: '/operator/providers', label: 'Providers', end: false },
 ]
 
 function OperatorLayout() {
@@ -242,6 +244,7 @@ export function OperatorApp() {
           <Route path="hospitals" element={<HospitalsPage />} />
           <Route path="hospitals/:id" element={<HospitalDetailPage />} />
           <Route path="signups" element={<SignupsPage />} />
+          <Route path="providers" element={<ProvidersPage />} />
           <Route path="*" element={<Navigate to="/operator" replace />} />
         </Route>
       </Routes>

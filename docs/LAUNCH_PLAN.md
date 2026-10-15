@@ -21,8 +21,8 @@ These block other steps, so settle them early.
 - [ ] **Product name.** "HMS" is a placeholder; the name appears on the landing page and in every email.
 - [ ] **Domain**, e.g. `yourbrand.com` or `yourbrand.ng`. Hospitals get `<name>.yourdomain`.
 - [ ] **Prices** for Basic, Pro and Enterprise (monthly; yearly is 10× by default). Talk to two or three clinic owners about what they pay today.
-- [ ] **Email provider:** Brevo (free for 300 emails/day) is the easiest start.
-- [ ] **SMS provider:** Termii or Africa's Talking. Only needed for Stage 2's SMS reminders.
+- [x] **Email provider:** ZeptoMail.
+- [x] **SMS provider:** Termii.
 - [ ] **Terms of service and privacy policy wording.** A Nigerian lawyer, or a reputable template adapted to the NDPA (Nigeria Data Protection Act). You handle patient data, so this matters.
 
 ---
@@ -45,8 +45,9 @@ Step-by-step instructions are in [RUNNING_AND_HOSTING.md](RUNNING_AND_HOSTING.md
 - [ ] Check that Render's backup retention on your database plan is acceptable (how many days back you can restore).
 
 ### 1.2 Email
-- [ ] Create the Brevo (or other) account and **verify your domain** (SPF/DKIM records), so emails don't land in spam.
-- [ ] Set `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` and `DEFAULT_FROM_EMAIL` on Render.
+- [ ] In ZeptoMail, **verify your sending domain** (the DNS records it gives you), so emails don't land in spam, and create a Mail Agent.
+- [ ] On Render, set `PROVIDER_ENCRYPTION_KEY` (generate it as described in [RUNNING_AND_HOSTING.md](RUNNING_AND_HOSTING.md#33-settings)) and `DEFAULT_FROM_EMAIL`.
+- [ ] Operator dashboard → **Providers** → ZeptoMail: paste the Send Mail token, set the API host for your region and the From address, **Send test**, then **Use ZeptoMail**.
 - [ ] Test it: use "Forgot password?" on a hospital and confirm the email arrives.
 
 ### 1.3 Error monitoring
@@ -98,7 +99,8 @@ In this order:
 - [x] Per-hospital switches and sender name; opt-out for patients.
 - [x] An hourly Render cron job (`hms-reminders` in render.yaml).
 - [x] A monthly cap per hospital (`SMS_MONTHLY_LIMIT_PER_HOSPITAL`, default 500) so costs can't run away.
-- [ ] 🧑 Open a Termii or Africa's Talking account, register a sender ID, and set `SMS_BACKEND`, `SMS_API_KEY` (and `SMS_USERNAME` for Africa's Talking) and `SMS_SENDER_ID` on Render.
+- [x] Email and SMS providers are switchable at runtime from the operator dashboard (*Providers*).
+- [ ] 🧑 Termii: get a sender ID approved, ask for the DND route, fund the account. Then go to *Providers* → Termii: enter the API key, base URL and sender ID, **Send test**, then **Use Termii**.
 - [ ] 🧑 Decide whether SMS is included in plans (as now, up to the cap) or charged per message.
 
 ### 2.4 Also built ✅

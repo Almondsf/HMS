@@ -15,6 +15,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     # Platform operators sign in here (tokens are only valid on the platform site)
     path('api/v1/auth/', include('authentication.urls')),
+    path('api/v1/platform/providers/', include('providers.urls')),
     path('api/v1/platform/', include('tenants.urls')),
     path('api/v1/platform/billing/paystack/webhook/', paystack_webhook, name='paystack-webhook'),
     # Self-serve signup (public, rate limited)

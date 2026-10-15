@@ -110,18 +110,36 @@ class Command(BaseCommand):
         self.report(OK, 'Hospitals', f'{hospitals.count()} ({hospitals.filter(is_active=True).count()} active)')
 
     def mail(self):
-        backend = settings.EMAIL_BACKEND.rsplit('.', 1)[0].rsplit('.', 1)[-1]
-        if backend != 'smtp':
-            self.report(FAIL, 'Email', f'{backend} backend: emails are not delivered. Set the EMAIL_* settings')
-        elif not settings.EMAIL_HOST:
-            self.report(FAIL, 'Email', 'set EMAIL_HOST, EMAIL_HOST_USER and EMAIL_HOST_PASSWORD')
+        from providers import services as providers
+        from providers.models import ProviderConfig
+
+        active = ProviderConfig.objects.filter(channel='email', is_active=True).first()
+        if active:
+            ok = active.last_test_ok and active.provider != 'console'
+            self.report(
+                OK if ok else WARN,
+                'Email',
+                f'{active.provider} (chosen in the operator dashboard)'
+                + ('' if ok else ': send it a test from the Providers page'),
+            )
         else:
-            self.report(OK, 'Email', f'via {settings.EMAIL_HOST}')
+            label, _ = providers.status('email')
+            backend = settings.FALLBACK_EMAIL_BACKEND.rsplit('.', 2)[-2]
+            if backend != 'smtp' or not settings.EMAIL_HOST:
+                self.report(FAIL, 'Email', f'{label}: emails are not delivered. Set up ZeptoMail under Providers')
+            else:
+                self.report(OK, 'Email', f'{label} (server settings)')
         sender = settings.DEFAULT_FROM_EMAIL
         self.report(
             WARN if 'localhost' in sender else OK,
             'Email sender',
             sender if 'localhost' not in sender else f'{sender}: set DEFAULT_FROM_EMAIL to an address on your domain',
+        )
+        key = settings.PROVIDER_ENCRYPTION_KEY
+        self.report(
+            OK if key else (WARN if settings.DEBUG else FAIL),
+            'Provider key encryption',
+            'set' if key else 'set PROVIDER_ENCRYPTION_KEY before saving provider keys in the dashboard',
         )
 
     def payments(self):
@@ -174,23 +192,22 @@ class Command(BaseCommand):
             )
 
     def text_messages(self):
-        from helpers import sms
+        from providers import services as providers
 
-        backend = settings.SMS_BACKEND
-        if not backend:
-            self.report(WARN, 'SMS', 'off: appointment confirmations and reminders are not sent')
-        elif not sms.available():
-            self.report(FAIL, 'SMS', f'unknown SMS_BACKEND "{backend}"')
-        elif backend == 'console':
-            self.report(FAIL, 'SMS', 'console backend: messages are only printed. Set termii or africastalking')
-        elif not settings.SMS_API_KEY:
-            self.report(FAIL, 'SMS', f'{backend}: set SMS_API_KEY')
-        else:
+        provider = providers.current('sms')
+        label, source = providers.status('sms')
+        if provider is None:
             self.report(
-                OK if settings.SMS_SENDER_ID else WARN,
-                'SMS',
-                f'{backend}' + ('' if settings.SMS_SENDER_ID else ': set SMS_SENDER_ID (registered with the provider)'),
+                WARN, 'SMS', 'off: appointment confirmations and reminders are not sent. Set up Termii under Providers'
             )
+        elif not provider.delivers:
+            self.report(FAIL, 'SMS', f'{label}: messages are only printed. Set up Termii under Providers')
+        else:
+            sender = provider.values.get('sender_id')
+            self.report(
+                OK if sender else WARN, 'SMS',
+                f'{label} ({source})' + ('' if sender else ': set a sender ID registered with Termii'),
+            )  # fmt: skip
 
     def legal(self):
         from legal.models import LegalDocument

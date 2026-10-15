@@ -27,5 +27,6 @@ STORAGES = {
 SIGNUP_PROVISION_IN_BACKGROUND = False
 SMS_SEND_IN_BACKGROUND = False
 SMS_BACKEND = ''  # tests switch it on where needed
+PROVIDER_ENCRYPTION_KEY = 'sZLaESneHVup8btkzpWs_3KtUCk5vgPLD6hwWDezcGc='  # test-only key  # noqa: S105
 
 LOGGING['root']['level'] = 'WARNING'  # noqa: F405

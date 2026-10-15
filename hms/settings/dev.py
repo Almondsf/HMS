@@ -22,7 +22,7 @@ API_DOCS_PUBLIC = True
 AUTH_REFRESH_COOKIE_SECURE = False  # local http://
 
 # Emails (password resets) are printed in the runserver console; reset links open the Vite app
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+FALLBACK_EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 SMS_BACKEND = config('SMS_BACKEND', default='console')  # messages print in the runserver console
 FRONTEND_URL = config('FRONTEND_URL', default='http://{subdomain}.localhost:5173')
 

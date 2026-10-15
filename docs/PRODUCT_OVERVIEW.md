@@ -120,7 +120,7 @@ Key ideas:
 - Book, reschedule, cancel and mark no-shows. **No double-booking** of a doctor or a patient, even under simultaneous requests.
 - **Check-in** on the day turns an appointment into a visit in the doctor's queue. Walk-ins skip the appointment.
 - **Today's queue** shows who is with the doctor, then who is waiting, ordered by **triage priority** and then arrival time, with waiting minutes.
-- **SMS:** a confirmation when an appointment is booked or moved, and a reminder the morning before. Each hospital switches them on. Patients can opt out, and every message (or the reason one wasn't sent) is recorded. Providers: Termii or Africa's Talking. Each hospital has a monthly cap.
+- **SMS:** a confirmation when an appointment is booked or moved, and a reminder the morning before. Each hospital switches them on. Patients can opt out, and every message (or the reason one wasn't sent) is recorded. Sent through Termii. Each hospital has a monthly cap.
 
 ### 5.4 Triage and vital signs (nurses)
 - Triage levels: emergency, urgent, standard, non-urgent. An **emergency** raises an event.
@@ -197,6 +197,7 @@ Key ideas:
   - each hospital's usage (staff, patients, visits, last activity) and payments
   - signups and their outcome
 - Actions: give extra days, record a bank-transfer payment, change plan, suspend or reactivate, retry a failed signup.
+- **Providers:** choose and switch who delivers email (ZeptoMail, SMTP) and SMS (Termii) without a deploy. Every provider must pass a test message before it's used.
 - Provision a hospital directly (API or command), and edit prices (platform admin).
 - Paystack webhook for renewals, failed payments and cancellations.
 
@@ -212,6 +213,7 @@ Key ideas:
 | Database | PostgreSQL, one **schema per hospital** (django-tenants) |
 | Web app | React 19, TypeScript, Vite, Tailwind CSS (white and sky blue), TanStack Query, React Router |
 | Payments | Paystack |
+| Email and SMS | ZeptoMail and Termii, switchable at runtime by the platform operator (SMTP also supported) |
 | Monitoring | Sentry (scrubbed of patient data), structured JSON logs with request ids |
 | Hosting | One Docker service on Render; Django serves both the API and the built web app |
 | Quality | GitHub Actions: lint (ruff), tests on Postgres with ≥85% coverage, dependency audit, frontend build, Docker boot check |
@@ -317,6 +319,7 @@ AuditEvent (append-only, references any of the above)
 | Password guessing | Lockout, rate limits, Argon2 hashing, strength validation |
 | Insider snooping | Every patient-record read is audited; the audit log is append-only |
 | Data leaks via error reports | Sentry never receives request bodies, query strings, names or emails |
+| Leaked provider keys | Email and SMS API keys are encrypted in the database and never shown again; changes are audited |
 | Fake payments | Payments verified with Paystack server-side; webhooks signature-checked; each reference counted once |
 | Transport | HTTPS forced in production, HSTS, secure cookies |
 | Data loss | Managed Postgres backups plus a tested restore drill ([BACKUP_AND_RESTORE.md](BACKUP_AND_RESTORE.md)) |

@@ -152,3 +152,74 @@ export function useSignups(filters: { status?: SignupStatus; search: string }) {
 export function useRetrySignup() {
   return usePlatformMutation((id: number) => api(`/api/v1/platform/signups/${id}/retry/`, { method: 'POST' }))
 }
+
+// ---- Email and SMS providers ----
+
+export type ProviderChannel = 'email' | 'sms'
+
+export interface ProviderField {
+  name: string
+  label: string
+  secret: boolean
+  required: boolean
+  default: string
+  help: string
+}
+
+export interface ProviderInfo {
+  channel: ProviderChannel
+  name: string
+  label: string
+  /** false for console providers, which only print */
+  delivers: boolean
+  fields: ProviderField[]
+}
+
+export interface ProviderSetup {
+  channel: ProviderChannel
+  provider: string
+  label: string
+  settings: Record<string, string>
+  /** Masked, e.g. "••••a1b2": the real keys are never sent back */
+  secrets: Record<string, string>
+  is_active: boolean
+  last_test_ok: boolean | null
+  last_tested_at: string | null
+  last_test_error: string
+}
+
+export interface ProvidersOverview {
+  channels: Record<ProviderChannel, { using: string; source: 'dashboard' | 'server settings' }>
+  catalog: ProviderInfo[]
+  configs: ProviderSetup[]
+}
+
+const PROVIDERS = ['platform', 'providers']
+
+export function useProviders() {
+  return useQuery({ queryKey: PROVIDERS, queryFn: () => api<ProvidersOverview>('/api/v1/platform/providers/') })
+}
+
+function useProviderMutation<T>(mutationFn: (input: T) => Promise<unknown>) {
+  const queryClient = useQueryClient()
+  return useMutation({ mutationFn, onSuccess: () => queryClient.invalidateQueries({ queryKey: PROVIDERS }) })
+}
+
+export function useSaveProvider(channel: ProviderChannel, provider: string) {
+  return useProviderMutation((values: Record<string, string>) =>
+    api<ProviderSetup>(`/api/v1/platform/providers/${channel}/${provider}/`, { method: 'PUT', body: values }),
+  )
+}
+
+export function useTestProvider(channel: ProviderChannel, provider: string) {
+  return useProviderMutation((to: string) =>
+    api<ProviderSetup>(`/api/v1/platform/providers/${channel}/${provider}/test/`, { method: 'POST', body: { to } }),
+  )
+}
+
+/** Switch the channel to a provider now; null goes back to the server settings. */
+export function useSwitchProvider(channel: ProviderChannel) {
+  return useProviderMutation((provider: string | null) =>
+    api<ProvidersOverview>(`/api/v1/platform/providers/${channel}/`, { method: 'PUT', body: { provider } }),
+  )
+}

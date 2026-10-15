@@ -359,6 +359,13 @@ As the platform operator, I want web screens showing hospitals, trials ending, o
 - I can see every signup and retry one that failed.
 - Only platform superusers can open it.
 
+**PLT-7 ✅ Switch email and SMS providers**
+As the platform operator, I want to choose and switch the companies that deliver our email and SMS without a deploy, so that I can react to outages, prices or deliverability problems.
+- I enter a provider's keys once; they are stored encrypted and never shown again.
+- I can send a test message and see the provider's own error if it fails.
+- Switching only works after a successful test, so a typo can't silently stop emails or reminders.
+- I can also switch with an API call (`PUT /api/v1/platform/providers/<email|sms>/`).
+
 ---
 
 ## 11. Prospective hospital (BUY)

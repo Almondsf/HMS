@@ -39,28 +39,17 @@ services:
         sync: false
       - key: SENTRY_FRONTEND_DSN
         sync: false
-      # Password reset emails: any SMTP provider (Brevo, Mailgun, SES, Postmark...)
-      - key: EMAIL_HOST
-        sync: false
-      - key: EMAIL_HOST_USER
-        sync: false
-      - key: EMAIL_HOST_PASSWORD
+      # Email (ZeptoMail) and SMS (Termii) are set up in the operator dashboard → Providers.
+      # Their API keys are stored encrypted with this key. Generate it once with
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # and keep it: if it changes, the provider keys must be entered again.
+      - key: PROVIDER_ENCRYPTION_KEY
         sync: false
       - key: DEFAULT_FROM_EMAIL
-        sync: false # e.g. "St Luke's HMS <no-reply@yourdomain.com>"
+        sync: false # e.g. "HMS <no-reply@yourdomain.com>"
       # Subscriptions: Paystack secret key (sk_live_...). Then set the webhook URL in Paystack
       # to https://<platform domain>/api/v1/platform/billing/paystack/webhook/
       - key: PAYSTACK_SECRET_KEY
-        sync: false
-      # Patient SMS (optional): termii or africastalking, with the provider's API key.
-      # Sender IDs must be registered with the provider. See helpers/sms.py.
-      - key: SMS_BACKEND
-        sync: false
-      - key: SMS_API_KEY
-        sync: false
-      - key: SMS_USERNAME
-        sync: false # Africa's Talking only
-      - key: SMS_SENDER_ID
         sync: false
 
   # Hourly jobs (manage.py run_hourly): SMS appointment reminders, sent once each hospital's
@@ -89,11 +78,7 @@ services:
         fromService: { type: web, name: hms, envVarKey: PRODUCT_NAME }
       - key: SENTRY_DSN
         fromService: { type: web, name: hms, envVarKey: SENTRY_DSN }
-      - key: SMS_BACKEND
-        fromService: { type: web, name: hms, envVarKey: SMS_BACKEND }
-      - key: SMS_API_KEY
-        fromService: { type: web, name: hms, envVarKey: SMS_API_KEY }
-      - key: SMS_USERNAME
-        fromService: { type: web, name: hms, envVarKey: SMS_USERNAME }
-      - key: SMS_SENDER_ID
-        fromService: { type: web, name: hms, envVarKey: SMS_SENDER_ID }
+      - key: PROVIDER_ENCRYPTION_KEY # to use the email/SMS providers set up in the dashboard
+        fromService: { type: web, name: hms, envVarKey: PROVIDER_ENCRYPTION_KEY }
+      - key: DEFAULT_FROM_EMAIL
+        fromService: { type: web, name: hms, envVarKey: DEFAULT_FROM_EMAIL }

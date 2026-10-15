@@ -4,7 +4,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.core.management import call_command
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
 
@@ -38,24 +38,17 @@ class NormalizeTests(SimpleTestCase):
                 self.assertEqual(sms.normalize(number), expected)
 
 
-class ProviderTests(SimpleTestCase):
-    @override_settings(SMS_BACKEND='termii', SMS_API_KEY='key')
-    def test_termii(self):
-        with patch('helpers.sms._post', return_value={'message_id': '3017', 'message': 'Successfully Sent'}) as post:
+class ProviderTests(TestCase):
+    @override_settings(SMS_BACKEND='termii', SMS_API_KEY='key', SMS_SENDER_ID='HMS')
+    def test_termii_from_server_settings(self):
+        with patch('providers.registry.post_json', return_value={'message_id': '3017'}) as post:
             self.assertEqual(sms.send(to='+2348031234567', body='Hi', sender='STLUKES'), ('termii', '3017'))
-        self.assertIn(b'"to": "2348031234567"', post.call_args.kwargs['data'])
-        with patch('helpers.sms._post', return_value={'message': 'Insufficient balance'}):
+        url, payload, _ = post.call_args.args
+        self.assertTrue(url.endswith('/api/sms/send'))
+        self.assertEqual((payload['to'], payload['from'], payload['channel']), ('2348031234567', 'STLUKES', 'dnd'))
+        with patch('providers.registry.post_json', return_value={'message': 'Insufficient balance'}):
             with self.assertRaisesMessage(sms.SmsError, 'Insufficient balance'):
                 sms.send(to='+2348031234567', body='Hi')
-
-    @override_settings(SMS_BACKEND='africastalking', SMS_API_KEY='key', SMS_USERNAME='hms')
-    def test_africas_talking(self):
-        ok = {'SMSMessageData': {'Recipients': [{'status': 'Success', 'messageId': 'ATX1'}]}}
-        with patch('helpers.sms._post', return_value=ok):
-            self.assertEqual(sms.send(to='+2348031234567', body='Hi'), ('africastalking', 'ATX1'))
-        refused = {'SMSMessageData': {'Recipients': [{'status': 'InvalidPhoneNumber'}]}}
-        with patch('helpers.sms._post', return_value=refused), self.assertRaises(sms.SmsError):
-            sms.send(to='+2348031234567', body='Hi')
 
     def test_off_by_default(self):
         self.assertFalse(sms.available())
@@ -77,7 +70,7 @@ class SmsTestCase(TenantAPITestCase):
         self.patient = make_user(Role.PATIENT)
         self.patient.phone_number = '08031234567'
         self.patient.save()
-        sender = patch('helpers.sms.ConsoleBackend.send', return_value='msg-1')
+        sender = patch('providers.registry.ConsoleSms.send', return_value='msg-1')
         self.send = sender.start()
         self.addCleanup(sender.stop)
 

@@ -110,6 +110,7 @@ Each hospital is a **tenant** with its own Postgres schema ([django-tenants](htt
 | `GET /api/v1/platform/hospitals/<id>/` | One hospital, with its usage (staff, patients, recent visits, last activity) and payments. The list takes `?search=` |
 | `POST /api/v1/platform/hospitals/<id>/extend/` | Give 1-90 extra days of access (`days`, `reason`); audited |
 | `GET /api/v1/platform/overview/` | Hospitals by state, monthly recurring revenue, money collected per month, and who needs attention |
+| `GET/PUT /api/v1/platform/providers/...` | Choose, configure, test and switch the email and SMS providers (see [Email and SMS providers](#email-and-sms-providers)) |
 | `GET /api/v1/platform/signups/` | Signups (`?status=`, `?search=`); `POST .../<id>/retry/` retries a failed or stuck one |
 
 **Operator dashboard:** the same things as web screens, at `https://<platform domain>/operator`. Sign in with a platform superuser (create one with `python manage.py createsuperuser` on the platform). It shows:
@@ -248,6 +249,31 @@ Staff get notified in the web app (the bell in the header, and a Notifications p
 - **Subscription notices** come from `notify_subscription_status`. It runs in the hourly job (`run_hourly`, the `hms-reminders` cron job) together with the SMS reminders.
 - **API:** `GET /api/v1/notifications/` (`?unread=true`), `GET .../unread-count/` (the app checks every 30 seconds), `POST .../<id>/read/`, `POST .../read-all/`.
 
+### Email and SMS providers
+
+Who delivers the platform's email and SMS is chosen at runtime by a platform operator, in the operator dashboard (*Providers*) or through the API. It can be switched at any time without a deploy.
+
+| Channel | Providers |
+|---|---|
+| Email (signup, password resets, welcome) | **ZeptoMail** (Zoho), or any **SMTP** server |
+| SMS (appointment confirmations and reminders) | **Termii** |
+| Both, in development | **Console**: prints messages instead of sending them. Never allowed as the active provider in production |
+
+How it works:
+1. **Save** a provider's settings: `PUT /api/v1/platform/providers/<channel>/<provider>/` with its fields, e.g. ZeptoMail's `api_token`, `api_host`, `from_email`. Secret fields left blank keep their saved value.
+2. **Test** it: `POST .../<channel>/<provider>/test/` with `{"to": "you@x.com"}` or a mobile number. The result is stored, with the provider's own error message if it fails.
+3. **Switch** to it: `PUT /api/v1/platform/providers/<channel>/` with `{"provider": "zeptomail"}`. This only works after a successful test of the current settings, and any later change to the settings needs a new test. `{"provider": null}` goes back to the server settings.
+
+Safeguards:
+- **Encrypted keys:** API keys are stored encrypted with `PROVIDER_ENCRYPTION_KEY` and never returned (only `••••a1b2`).
+- **Restricted and audited:** only platform superusers can change providers, and every save, test and switch is audited.
+- **Fallback:** without a chosen provider, the server settings apply: `EMAIL_BACKEND`/`EMAIL_HOST...` for email, and `SMS_BACKEND`/`SMS_API_KEY...` for SMS.
+- **Adding a provider** is one class in [providers/registry.py](providers/registry.py). The dashboard form is built from its declared fields.
+
+Setting up ZeptoMail: verify your sending domain in ZeptoMail (DNS records). Then copy the Send Mail token from *Mail Agents → your agent → SMTP/API*. The API host depends on your account's region (`api.zeptomail.com`, `.eu`, `.in`…).
+
+Setting up Termii: copy the API key and your account's base URL. Get a sender ID approved, and ask Termii to activate the **DND** route so messages reach numbers on Do-Not-Disturb.
+
 ### Patient SMS
 
 Appointment confirmations (when booked or moved) and reminders (the morning before), so fewer patients miss appointments.
@@ -255,8 +281,8 @@ Appointment confirmations (when booked or moved) and reminders (the morning befo
 - **Hospitals switch them on** under *Settings → Patient SMS*, and may set a sender name (registered with the provider first).
 - **Skipped, with the reason recorded:** patients ticked "Don't send appointment SMS", patients without a valid mobile number, and anything over the hospital's monthly cap (`SMS_MONTHLY_LIMIT_PER_HOSPITAL`, default 500).
 - **Numbers:** written as `0803...` they are treated as Nigerian (`SMS_DEFAULT_COUNTRY_CODE`).
-- **Sending:** confirmations are sent in the background right after booking. Reminders come from `python manage.py send_appointment_reminders`, run hourly (the `hms-reminders` cron job in render.yaml). Each hospital's reminders go out once its local time reaches `SMS_REMINDER_HOUR` (default 9), never twice, and not for lapsed hospitals.
-- **Providers** ([helpers/sms.py](helpers/sms.py)): set `SMS_BACKEND` to `termii` or `africastalking`, plus `SMS_API_KEY` (and `SMS_USERNAME` for Africa's Talking) and `SMS_SENDER_ID`. In development, messages print in the `runserver` console.
+- **Sending:** confirmations are sent in the background right after booking. Reminders come from `python manage.py send_appointment_reminders` (part of `run_hourly`), run hourly (the `hms-reminders` cron job in render.yaml). Each hospital's reminders go out once its local time reaches `SMS_REMINDER_HOUR` (default 9), never twice, and not for lapsed hospitals.
+- **Delivery:** through the SMS provider chosen in the operator dashboard (Termii; see [Email and SMS providers](#email-and-sms-providers)). In development, messages print in the `runserver` console.
 - **History:** `GET /api/v1/sms-messages/?patient=<id>` (admin, front desk) lists what was sent, failed or skipped, and why.
 
 ### Triage and vital signs
@@ -331,7 +357,7 @@ Every report takes `?date_from=&date_to=` (`YYYY-MM-DD`, in hospital time). The 
 - **Password resets:**
   - Admins reset a staff member's password from **Staff → Reset password**. This issues a temporary password shown once, signs the person out everywhere and unlocks the account. They must choose their own password at next sign-in.
   - Staff can also use **Forgot password?** on the sign-in page. The emailed link works once and expires after an hour, and the page never reveals whether an email has an account.
-  - Configure email with the `EMAIL_*` variables (any SMTP provider). Locally, emails print in the `runserver` console.
+  - Emails go through the email provider chosen in the operator dashboard (see [Email and SMS providers](#email-and-sms-providers)). Locally they print in the `runserver` console.
 - **Error monitoring:** set `SENTRY_DSN` (API) and `SENTRY_FRONTEND_DSN` (web app) to report errors to Sentry, which has a free tier.
   - Reports include the stack trace, hospital, request id and the user's internal id and role.
   - **Never** sent: request bodies, query strings (searches can contain patient names), cookies, auth headers, local variables, or names and emails. See [helpers/monitoring.py](helpers/monitoring.py).
