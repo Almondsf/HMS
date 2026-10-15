@@ -1,6 +1,7 @@
 '''Patient registry, staff directory and departments.'''
 
 from django.http import HttpResponse
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -19,6 +20,12 @@ from .serializers import DepartmentSerializer, PatientSerializer, StaffSerialize
 
 PATIENT_SEARCH_FIELDS = ['mrn', 'user__first_name', 'user__last_name', 'user__email', 'user__phone_number']
 STAFF_SEARCH_FIELDS = ['first_name', 'last_name', 'email', 'phone_number']
+
+
+class ImportOptionsSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    dry_run = serializers.BooleanField(default=True)
+    skip_invalid = serializers.BooleanField(default=False)
 
 
 class PatientViewSet(AuditedReadMixin, viewsets.ModelViewSet):
@@ -53,6 +60,7 @@ class PatientViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="patients-import-template.csv"'
         return response
 
+    @swagger_auto_schema(request_body=ImportOptionsSerializer, responses={200: 'Import summary'})
     @action(detail=False, methods=['post'], url_path='import', parser_classes=[MultiPartParser])
     def import_patients(self, request):
         '''
@@ -72,12 +80,6 @@ class PatientViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         except patient_import.ImportFileError as exc:
             return Response({'file': [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result)
-
-
-class ImportOptionsSerializer(serializers.Serializer):
-    file = serializers.FileField()
-    dry_run = serializers.BooleanField(default=True)
-    skip_invalid = serializers.BooleanField(default=False)
 
 
 class StaffViewSet(viewsets.ReadOnlyModelViewSet):

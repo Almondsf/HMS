@@ -143,6 +143,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
 | `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
 | `database_report` | JSON summary per schema (row counts, migrations, audit protection), used to verify backups |
+| `launch_check [--email you@x.com] [--sms <number>]` | Is this deployment ready for real hospitals? Checks domains, email, Paystack, prices, Sentry, SMS and the legal text, optionally sends a test email and SMS, and lists what to fix. Exits with 1 while something blocks launch |
 | `export_hospital --schema <hospital> [--output file.zip]` | All of a hospital's records as a ZIP of CSV files, e.g. for a hospital that has left. Contains patient data: hand it over securely |
 | `process_signups [--retry-failed]` | Finish hospital setups interrupted part-way (e.g. by a deploy) and delete signups never verified. Runs on every deploy |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
@@ -460,7 +461,8 @@ Production runs as **one Docker service** ([Dockerfile](Dockerfile)): it builds 
    `SECRET_KEY` is generated automatically. For subscriptions, also set `PAYSTACK_SECRET_KEY` (see [Subscriptions](#subscriptions-what-hospitals-pay)).
 3. **Domains:** add `yourdomain.com` and the wildcard `*.yourdomain.com` to the service, and create the DNS records Render shows you. Each hospital then lives at `<name>.yourdomain.com`.
 4. **Each deploy** runs `migrate` (every hospital's schema) and `setup_platform` before switching traffic. The health check is `/api/health/`.
-5. **Create hospitals** from the service's Shell tab (`python manage.py create_hospital ...`) or through the platform API.
+5. **Check readiness:** in the Shell, run `python manage.py launch_check --email you@example.com`, and fix what it reports.
+6. **Create hospitals** from the service's Shell tab (`python manage.py create_hospital ...`) or through the platform API.
 
 The Docker image needs no other configuration: the hospital domain is injected into the web app at runtime (`window.__HMS_CONFIG__`), so one build works on any domain. To deploy without Docker, build the frontend (`cd frontend && npm ci && npm run build`) before `collectstatic`; Django serves `frontend/dist` when it exists.
 
