@@ -201,6 +201,16 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
   - `/cancel/`, by the front desk while the patient is still waiting
   - Recording a consultation starts a waiting visit automatically.
 
+### Importing patients
+
+Clinics moving from paper or Excel can bring in their patient list under *Patients → Import* (admin, front desk).
+
+- **Files:** `.xlsx` or `.csv`, up to 5,000 patients and 5 MB. Download the template from the page (`GET /api/v1/patients/import-template/`), or use your own sheet. Common column names are recognised: *Surname*, *DOB*, *Sex*, *Mobile*, *Card number*, *Folder number*...
+- **Values:** dates as `31/12/1990` or `1990-12-31`; gender as M/F/Male/Female/Other. Phone numbers that Excel stored without their leading 0 get it back.
+- **Checks:** `POST /api/v1/patients/import/` with the `file` checks every row with the same rules as registering a patient, and saves nothing (`dry_run` is true by default). Problems come back by row and column, including repeated record numbers or emails, and possible duplicates of registered patients (same name and date of birth).
+- **Saving:** send `dry_run=false` to save. If any row has a problem, nothing is saved unless `skip_invalid=true`, which imports only the good rows.
+- Patients without an existing record number get a new one. The import is audited.
+
 ### Exporting a hospital's records
 
 Hospital admins can download everything their hospital has recorded under *Settings → Export all records* (`POST /api/v1/hospital/export/` with their `password`).

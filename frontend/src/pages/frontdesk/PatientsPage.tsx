@@ -1,4 +1,4 @@
-import { UserPlus, Users } from 'lucide-react'
+import { Upload, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
@@ -27,9 +27,14 @@ export function PatientsPage() {
         description="Search by name, record number (MRN) or phone."
         actions={
           canRegister && (
-            <Button icon={<UserPlus className="size-4" />} onClick={() => setRegistering(true)}>
-              Register patient
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" icon={<Upload className="size-4" />} onClick={() => navigate('/patients/import')}>
+                Import
+              </Button>
+              <Button icon={<UserPlus className="size-4" />} onClick={() => setRegistering(true)}>
+                Register patient
+              </Button>
+            </div>
           )
         }
       />

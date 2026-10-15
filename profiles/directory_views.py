@@ -1,7 +1,9 @@
 '''Patient registry, staff directory and departments.'''
 
-from rest_framework import status, viewsets
+from django.http import HttpResponse
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from audit.mixins import AuditedReadMixin
@@ -11,7 +13,7 @@ from authentication.permissions import STAFF_ROLES, Role, allow_roles
 from helpers.search import search
 from tenants.features import Feature, requires_feature
 
-from . import services
+from . import patient_import, services
 from .models import Department, PatientProfile
 from .serializers import DepartmentSerializer, PatientSerializer, StaffSerializer
 
@@ -43,6 +45,39 @@ class PatientViewSet(AuditedReadMixin, viewsets.ModelViewSet):
         if self.request.user.user_type == Role.PATIENT:
             return patients.filter(user=self.request.user)
         return search(patients, self.request.query_params.get('search'), PATIENT_SEARCH_FIELDS)
+
+    @action(detail=False, methods=['get'], url_path='import-template')
+    def import_template(self, request):
+        '''The spreadsheet columns for importing patients (CSV; opens in Excel).'''
+        response = HttpResponse(patient_import.template_csv(), content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="patients-import-template.csv"'
+        return response
+
+    @action(detail=False, methods=['post'], url_path='import', parser_classes=[MultiPartParser])
+    def import_patients(self, request):
+        '''
+        Import patients from a CSV or Excel file. With dry_run=true (the
+        default) nothing is saved: the response lists problems by row. Then
+        send dry_run=false to save, with skip_invalid=true to leave out the
+        rows that have problems.
+        '''
+        options = ImportOptionsSerializer(data=request.data)
+        options.is_valid(raise_exception=True)
+        try:
+            result = patient_import.run_import(
+                options.validated_data['file'],
+                commit=not options.validated_data['dry_run'],
+                skip_invalid=options.validated_data['skip_invalid'],
+            )
+        except patient_import.ImportFileError as exc:
+            return Response({'file': [str(exc)]}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
+
+
+class ImportOptionsSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    dry_run = serializers.BooleanField(default=True)
+    skip_invalid = serializers.BooleanField(default=False)
 
 
 class StaffViewSet(viewsets.ReadOnlyModelViewSet):

@@ -102,6 +102,13 @@ As a receptionist, I want to see who is waiting for which doctor and for how lon
 **FD-9 ✅ Take a payment**
 As a receptionist at a small clinic without a cashier, I want to record payments, so that patients can pay at the front desk.
 
+**FD-11 ✅ Bring in our existing patients**
+As a receptionist at a clinic moving from paper or Excel, I want to import our patient list, so that we don't retype hundreds of records.
+- I can upload an Excel or CSV file with our own column names (Surname, DOB, Card number...).
+- I see every problem by row and column before anything is saved, including likely duplicates of patients already registered.
+- I can import everything once it's clean, or just the good rows.
+- Existing record numbers are kept; patients without one get a new number.
+
 **FD-10 ✅ SMS reminders**
 As a receptionist, I want patients to get an SMS reminder before their appointment, so that fewer people miss them.
 - The admin switches on booking confirmations and day-before reminders in Settings.

@@ -128,7 +128,7 @@ Let the pilots decide the order. Likely candidates:
 | Feature | Who it's for | Size |
 |---|---|---|
 | ~~Data export (a hospital downloads all its records)~~ ✅ done | Everyone; it builds trust and is expected under the NDPA | Small |
-| Records importer | New hospitals moving from paper, Excel or another system | Medium |
+| ~~Records importer (patients)~~ ✅ done; visits and bills from another system would be next | New hospitals moving from paper, Excel or another system | Medium |
 | Multi-branch (one group, several locations) | Hospital groups | Large |
 | Custom domains (`portal.stlukes.com`) | Larger hospitals | Medium |
 | Single sign-on | Large organisations | Medium |

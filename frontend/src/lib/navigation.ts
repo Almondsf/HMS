@@ -33,6 +33,7 @@ export const ACCESS = {
   queue: ['receptionist', 'admin', 'nurse', 'doctor'],
   appointments: ['receptionist', 'admin', 'nurse', 'doctor'],
   patients: ['receptionist', 'admin', 'nurse', 'doctor', 'lab_tech', 'pharmacist'],
+  registerPatients: ['receptionist', 'admin'],
   visits: ['doctor', 'nurse', 'admin'],
   lab: ['lab_tech', 'admin'],
   pharmacy: ['pharmacist', 'admin'],
