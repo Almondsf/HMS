@@ -150,6 +150,7 @@ export function PatientForm({
     genotype: initial?.genotype ?? '',
     allergies: initial?.allergies ?? '',
   })
+  const [smsOptOut, setSmsOptOut] = useState(initial?.sms_opt_out ?? false)
   const set = (field: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm((current) => ({ ...current, [field]: event.target.value }))
 
@@ -177,6 +178,7 @@ export function PatientForm({
       blood_group: form.blood_group || null,
       genotype: form.genotype || null,
       allergies: form.allergies,
+      sms_opt_out: smsOptOut,
     })
   }
 
@@ -214,6 +216,18 @@ export function PatientForm({
         </Select>
       </div>
       <Textarea label="Allergies" rows={2} value={form.allergies} onChange={set('allergies')} />
+      <label className="flex items-start gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={smsOptOut}
+          onChange={(event) => setSmsOptOut(event.target.checked)}
+          className="mt-0.5 size-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+        />
+        <span>
+          Don't send appointment SMS
+          <span className="block text-xs text-slate-500">If the patient asked not to get text messages</span>
+        </span>
+      </label>
       {!initial && (
         <Input
           label="Existing record number"

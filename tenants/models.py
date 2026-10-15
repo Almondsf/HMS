@@ -30,6 +30,11 @@ class Hospital(TenantMixin):
     mrn_prefix = models.CharField(
         max_length=10, default='MRN', help_text='Prefix for patient medical record numbers, e.g. MRN-000123'
     )
+    sms_booking_confirmations = models.BooleanField(default=False, help_text='SMS patients when they are booked')
+    sms_reminders = models.BooleanField(default=False, help_text='SMS patients the day before an appointment')
+    sms_sender_id = models.CharField(
+        max_length=11, blank=True, help_text='Name patients see, e.g. STLUKES (must be registered with the provider)'
+    )
 
     auto_create_schema = True
     auto_drop_schema = False  # deleting a hospital row must never silently drop patient data

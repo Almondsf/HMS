@@ -27,6 +27,8 @@ export interface Patient {
   allergies: string | null
   medical_history: string | null
   assigned_doctor: number | null
+  /** Don't send this patient appointment SMS */
+  sms_opt_out: boolean
 }
 
 export type PatientInput = {
@@ -36,6 +38,7 @@ export type PatientInput = {
   genotype?: string | null
   allergies?: string
   medical_history?: string
+  sms_opt_out?: boolean
 }
 
 export interface StaffMember {

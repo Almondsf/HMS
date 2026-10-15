@@ -24,5 +24,7 @@ STORAGES = {
 
 # Create signed-up hospitals in the request's thread, so tests can see them
 SIGNUP_PROVISION_IN_BACKGROUND = False
+SMS_SEND_IN_BACKGROUND = False
+SMS_BACKEND = ''  # tests switch it on where needed
 
 LOGGING['root']['level'] = 'WARNING'  # noqa: F405

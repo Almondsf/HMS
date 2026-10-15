@@ -90,11 +90,13 @@ In this order:
 - [x] Revenue this month and per month, and monthly recurring revenue.
 - [x] Actions: record a bank transfer, change plan, extend a trial, suspend or reactivate.
 
-### 2.3 SMS appointment reminders (needs the SMS provider account)
-- [ ] Reminder the day before each appointment, and optionally on booking.
-- [ ] Per-hospital switch and sender name; opt-out for patients.
-- [ ] A job that runs on a schedule (a Render cron job).
-- [ ] Each SMS costs money: decide whether it's included in plans or charged per message.
+### 2.3 SMS appointment reminders (built; needs the SMS provider account)
+- [x] Reminder the day before each appointment, and optionally a confirmation on booking.
+- [x] Per-hospital switches and sender name; opt-out for patients.
+- [x] An hourly Render cron job (`hms-reminders` in render.yaml).
+- [x] A monthly cap per hospital (`SMS_MONTHLY_LIMIT_PER_HOSPITAL`, default 500) so costs can't run away.
+- [ ] 🧑 Open a Termii or Africa's Talking account, register a sender ID, and set `SMS_BACKEND`, `SMS_API_KEY` (and `SMS_USERNAME` for Africa's Talking) and `SMS_SENDER_ID` on Render.
+- [ ] 🧑 Decide whether SMS is included in plans (as now, up to the cap) or charged per message.
 
 ### 2.4 Polish from your click-through 🤝
 - [ ] Click through every screen as each role (the demo logins are in `DEMO_CREDENTIALS.md`) and note anything confusing. Each note becomes a fix.

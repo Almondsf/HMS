@@ -102,8 +102,12 @@ As a receptionist, I want to see who is waiting for which doctor and for how lon
 **FD-9 ✅ Take a payment**
 As a receptionist at a small clinic without a cashier, I want to record payments, so that patients can pay at the front desk.
 
-**FD-10 🔜 SMS reminders**
+**FD-10 ✅ SMS reminders**
 As a receptionist, I want patients to get an SMS reminder before their appointment, so that fewer people miss them.
+- The admin switches on booking confirmations and day-before reminders in Settings.
+- Patients who asked not to get SMS (a tick on their record), or who have no valid mobile number, are skipped, and the reason is recorded.
+- Each reminder is sent once. A rescheduled appointment gets a new confirmation and a new reminder.
+- The front desk can see what was sent to a patient (`/api/v1/sms-messages/?patient=`).
 
 ---
 

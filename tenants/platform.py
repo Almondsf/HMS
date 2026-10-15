@@ -129,9 +129,11 @@ def usage(hospital):
     from audit.models import AuditEvent
     from authentication.models import User
     from clinical.models import Visit
+    from notifications.models import SmsMessage
     from profiles.models import PatientProfile
 
     since = timezone.now() - timedelta(days=30)
+    month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     with tenant_context(hospital):
         staff = User.objects.filter(is_active=True).exclude(user_type=User.UserType.PATIENT)
         return {
@@ -140,4 +142,7 @@ def usage(hospital):
             'visits_last_30_days': Visit.objects.filter(created_at__gte=since).count(),
             'last_sign_in': staff.aggregate(last=Max('last_login'))['last'],
             'last_activity': AuditEvent.objects.aggregate(last=Max('occurred_at'))['last'],
+            'sms_this_month': SmsMessage.objects.filter(
+                status=SmsMessage.Status.SENT, sent_at__gte=month_start
+            ).count(),
         }

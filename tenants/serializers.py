@@ -4,6 +4,7 @@ from zoneinfo import available_timezones
 
 from rest_framework import serializers
 
+from helpers import sms
 from subscriptions.models import Subscription
 from subscriptions.services import describe
 
@@ -25,6 +26,11 @@ class HospitalSettingsValidation:
             raise serializers.ValidationError('Use a 3-letter ISO 4217 code, e.g. NGN.')
         return value
 
+    def validate_sms_sender_id(self, value):
+        if value and not re.fullmatch(r'[A-Za-z0-9 ]{3,11}', value):
+            raise serializers.ValidationError('Use 3-11 letters or digits, e.g. STLUKES.')
+        return value
+
     def validate_mrn_prefix(self, value):
         if not re.fullmatch(r'[A-Z0-9]{1,10}', value):
             raise serializers.ValidationError('Use 1-10 capital letters or digits.')
@@ -37,12 +43,14 @@ class HospitalSettingsSerializer(HospitalSettingsValidation, serializers.ModelSe
     domain = serializers.SerializerMethodField()
     features = serializers.SerializerMethodField()
     subscription = serializers.SerializerMethodField()
+    sms_available = serializers.SerializerMethodField()
 
     class Meta:
         model = Hospital
         fields = [
             'name', 'domain', 'plan', 'features', 'contact_email', 'phone', 'address',
             'timezone', 'currency', 'mrn_prefix', 'subscription',
+            'sms_available', 'sms_booking_confirmations', 'sms_reminders', 'sms_sender_id',
         ]  # fmt: skip
         read_only_fields = ['plan']
 
@@ -52,6 +60,10 @@ class HospitalSettingsSerializer(HospitalSettingsValidation, serializers.ModelSe
 
     def get_features(self, obj):
         return sorted(features_for(obj))
+
+    def get_sms_available(self, obj):
+        # Whether the platform has an SMS provider set up at all
+        return sms.available()
 
     def get_subscription(self, obj):
         # Drives the app's renewal banner and read-only notice

@@ -1,4 +1,5 @@
-# Render Blueprint: one Docker service running the API and the web app.
+# Render Blueprint: one Docker service running the API and the web app,
+# plus an hourly cron job for SMS appointment reminders.
 # https://render.com/docs/blueprint-spec
 #
 # Deliberately does NOT create a database: point DATABASE_URL at your
@@ -51,3 +52,47 @@ services:
       # to https://<platform domain>/api/v1/platform/billing/paystack/webhook/
       - key: PAYSTACK_SECRET_KEY
         sync: false
+      # Patient SMS (optional): termii or africastalking, with the provider's API key.
+      # Sender IDs must be registered with the provider. See helpers/sms.py.
+      - key: SMS_BACKEND
+        sync: false
+      - key: SMS_API_KEY
+        sync: false
+      - key: SMS_USERNAME
+        sync: false # Africa's Talking only
+      - key: SMS_SENDER_ID
+        sync: false
+
+  # Appointment reminders: hourly; each hospital's reminders go out once its morning
+  # reaches SMS_REMINDER_HOUR. Only needed once SMS is set up. Settings come from the web service.
+  - type: cron
+    name: hms-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    schedule: "0 * * * *"
+    dockerCommand: python manage.py send_appointment_reminders
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: hms.settings.prod
+      - key: LOG_FORMAT
+        value: json
+      - key: DATABASE_URL
+        fromService: { type: web, name: hms, envVarKey: DATABASE_URL }
+      - key: SECRET_KEY
+        fromService: { type: web, name: hms, envVarKey: SECRET_KEY }
+      - key: TENANT_BASE_DOMAIN
+        fromService: { type: web, name: hms, envVarKey: TENANT_BASE_DOMAIN }
+      - key: PLATFORM_DOMAINS
+        fromService: { type: web, name: hms, envVarKey: PLATFORM_DOMAINS }
+      - key: PRODUCT_NAME
+        fromService: { type: web, name: hms, envVarKey: PRODUCT_NAME }
+      - key: SENTRY_DSN
+        fromService: { type: web, name: hms, envVarKey: SENTRY_DSN }
+      - key: SMS_BACKEND
+        fromService: { type: web, name: hms, envVarKey: SMS_BACKEND }
+      - key: SMS_API_KEY
+        fromService: { type: web, name: hms, envVarKey: SMS_API_KEY }
+      - key: SMS_USERNAME
+        fromService: { type: web, name: hms, envVarKey: SMS_USERNAME }
+      - key: SMS_SENDER_ID
+        fromService: { type: web, name: hms, envVarKey: SMS_SENDER_ID }

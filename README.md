@@ -200,6 +200,17 @@ book appointment ──check-in──▶ visit: waiting ──start──▶ in 
   - `/cancel/`, by the front desk while the patient is still waiting
   - Recording a consultation starts a waiting visit automatically.
 
+### Patient SMS
+
+Appointment confirmations (when booked or moved) and reminders (the morning before), so fewer patients miss appointments.
+
+- **Hospitals switch them on** under *Settings → Patient SMS*, and may set a sender name (registered with the provider first).
+- **Skipped, with the reason recorded:** patients ticked "Don't send appointment SMS", patients without a valid mobile number, and anything over the hospital's monthly cap (`SMS_MONTHLY_LIMIT_PER_HOSPITAL`, default 500).
+- **Numbers:** written as `0803...` they are treated as Nigerian (`SMS_DEFAULT_COUNTRY_CODE`).
+- **Sending:** confirmations are sent in the background right after booking. Reminders come from `python manage.py send_appointment_reminders`, run hourly (the `hms-reminders` cron job in render.yaml). Each hospital's reminders go out once its local time reaches `SMS_REMINDER_HOUR` (default 9), never twice, and not for lapsed hospitals.
+- **Providers** ([helpers/sms.py](helpers/sms.py)): set `SMS_BACKEND` to `termii` or `africastalking`, plus `SMS_API_KEY` (and `SMS_USERNAME` for Africa's Talking) and `SMS_SENDER_ID`. In development, messages print in the `runserver` console.
+- **History:** `GET /api/v1/sms-messages/?patient=<id>` (admin, front desk) lists what was sent, failed or skipped, and why.
+
 ### Triage and vital signs
 
 - **Vitals:** nurses record vital signs for any visit, doctors for their own patients, with `POST /api/v1/vitals/`.

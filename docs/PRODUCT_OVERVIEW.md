@@ -120,6 +120,7 @@ Key ideas:
 - Book, reschedule, cancel and mark no-shows. **No double-booking** of a doctor or a patient, even under simultaneous requests.
 - **Check-in** on the day turns an appointment into a visit in the doctor's queue. Walk-ins skip the appointment.
 - **Today's queue** shows who is with the doctor, then who is waiting, ordered by **triage priority** and then arrival time, with waiting minutes.
+- **SMS:** a confirmation when an appointment is booked or moved, and a reminder the morning before. Each hospital switches them on. Patients can opt out, and every message (or the reason one wasn't sent) is recorded. Providers: Termii or Africa's Talking. Each hospital has a monthly cap.
 
 ### 5.4 Triage and vital signs (nurses)
 - Triage levels: emergency, urgent, standard, non-urgent. An **emergency** raises an event.
@@ -311,7 +312,6 @@ AuditEvent (append-only, references any of the above)
 
 | Item | Status |
 |---|---|
-| SMS appointment reminders | Planned (will subscribe to scheduling events) |
 | Patient-facing web or mobile app | Not started; the API already supports patient logins |
 | Inpatient care (wards, beds, admissions), theatre, maternity | Not started |
 | Enterprise features (SSO, multi-branch, data export, custom domains) | Phase 5 |

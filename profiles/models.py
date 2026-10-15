@@ -69,6 +69,7 @@ class PatientProfile(models.Model):
     blood_group = models.CharField(choices=bloodGroup.choices, max_length=3, blank=True, null=True)
     genotype = models.CharField(choices=genotype.choices, max_length=2, blank=True, null=True)
     allergies = models.TextField(blank=True, null=True)
+    sms_opt_out = models.BooleanField(default=False, help_text="Don't send this patient SMS")
     medical_history = models.TextField(blank=True, null=True)
     assigned_doctor = models.ForeignKey(DoctorProfile, on_delete=models.SET_NULL, blank=True, null=True)
 

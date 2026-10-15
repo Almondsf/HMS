@@ -59,6 +59,106 @@ function SettingsForm({ hospital }: { hospital: Hospital }) {
   )
 }
 
+function Toggle({
+  label,
+  hint,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string
+  hint: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className={`flex items-start gap-3 text-sm ${disabled ? 'opacity-60' : ''}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 size-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+      />
+      <span>
+        <span className="font-medium text-slate-900">{label}</span>
+        <span className="block text-slate-500">{hint}</span>
+      </span>
+    </label>
+  )
+}
+
+function SmsSettings({ hospital }: { hospital: Hospital }) {
+  const save = useSaveHospitalSettings()
+  const [form, setForm] = useState({
+    sms_booking_confirmations: hospital.sms_booking_confirmations,
+    sms_reminders: hospital.sms_reminders,
+    sms_sender_id: hospital.sms_sender_id,
+  })
+  const [saved, setSaved] = useState(false)
+  const errors = save.error instanceof ApiError ? save.error.fieldErrors : {}
+  const update = (changes: Partial<typeof form>) => {
+    setSaved(false)
+    setForm({ ...form, ...changes })
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    save.mutate(form, { onSuccess: () => setSaved(true) })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-6">
+      <Card className="space-y-4 p-5">
+        <div>
+          <h2 className="font-medium text-slate-900">Patient SMS</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Fewer missed appointments. Patients without a mobile number, or who asked not to get SMS, are skipped.
+          </p>
+        </div>
+        {!hospital.sms_available && (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            SMS isn't available yet. The platform team is setting it up.
+          </p>
+        )}
+        <Toggle
+          label="Booking confirmations"
+          hint="When an appointment is booked or moved"
+          checked={form.sms_booking_confirmations}
+          disabled={!hospital.sms_available}
+          onChange={(checked) => update({ sms_booking_confirmations: checked })}
+        />
+        <Toggle
+          label="Day-before reminders"
+          hint="The morning before each appointment"
+          checked={form.sms_reminders}
+          disabled={!hospital.sms_available}
+          onChange={(checked) => update({ sms_reminders: checked })}
+        />
+        <div className="max-w-xs">
+          <Input
+            label="Sender name (optional)"
+            value={form.sms_sender_id}
+            maxLength={11}
+            disabled={!hospital.sms_available}
+            onChange={(event) => update({ sms_sender_id: event.target.value })}
+            error={errors.sms_sender_id}
+            hint="What patients see as the sender, e.g. STLUKES. Ask the platform team to register it first."
+          />
+        </div>
+        <ErrorAlert error={Object.keys(errors).length ? null : save.error} />
+        <div className="flex items-center justify-end gap-3">
+          {saved && <span className="text-sm text-emerald-700">Saved</span>}
+          <Button type="submit" variant="secondary" loading={save.isPending} disabled={!hospital.sms_available}>
+            Save SMS settings
+          </Button>
+        </div>
+      </Card>
+    </form>
+  )
+}
+
 export function SettingsPage() {
   const { data: hospital, isLoading, error } = useHospital()
   if (isLoading) return <Spinner />
@@ -75,6 +175,7 @@ export function SettingsPage() {
         ))}
       </Card>
       <SettingsForm hospital={hospital} />
+      <SmsSettings hospital={hospital} />
     </>
   )
 }

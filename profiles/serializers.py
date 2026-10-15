@@ -73,7 +73,10 @@ class PatientSerializer(BaseProfileSerializer):
 
     class Meta:
         model = PatientProfile
-        fields = ['id', 'mrn', 'user', 'blood_group', 'genotype', 'allergies', 'medical_history', 'assigned_doctor']
+        fields = [
+            'id', 'mrn', 'user', 'blood_group', 'genotype', 'allergies', 'medical_history', 'assigned_doctor',
+            'sms_opt_out',
+        ]  # fmt: skip
 
     def validate_mrn(self, value):
         value = value.strip().upper()

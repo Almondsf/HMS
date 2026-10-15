@@ -27,6 +27,11 @@ export interface Hospital {
   currency: string
   mrn_prefix: string
   subscription: SubscriptionStatus | null
+  /** The platform has an SMS provider set up */
+  sms_available: boolean
+  sms_booking_confirmations: boolean
+  sms_reminders: boolean
+  sms_sender_id: string
 }
 
 export function useHospital() {
