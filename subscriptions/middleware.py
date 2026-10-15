@@ -6,7 +6,14 @@ from .models import Subscription
 
 SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
 # Still usable when read-only: signing in and out, passwords, paying, and taking your data away
-ALWAYS_ALLOWED = ('/api/v1/auth/', '/api/auth/', '/api/v1/subscription/', '/api/v1/hospital/export/', '/admin/')
+ALWAYS_ALLOWED = (
+    '/api/v1/auth/',
+    '/api/auth/',
+    '/api/v1/subscription/',
+    '/api/v1/hospital/export/',
+    '/api/v1/notifications/',
+    '/admin/',
+)
 
 
 class SubscriptionAccessMiddleware:

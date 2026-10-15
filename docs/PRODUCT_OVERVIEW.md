@@ -168,19 +168,29 @@ Key ideas:
 - **Export:** a hospital admin can download all of the hospital's records at any time, even when the subscription has lapsed: a ZIP of CSV files that open in Excel.
 - Requires the admin's password and is recorded in the audit log. Passwords are never exported.
 
-### 5.12 Audit trail
+### 5.12 Notifications
+- A bell in the header and a Notifications page. Each person sees what needs them, linked to the right screen:
+  - doctors: patients waiting, emergencies, critical vitals, lab results, appointments
+  - nurses: emergencies and critical vitals
+  - lab technicians: new requests
+  - pharmacists: new prescriptions and low stock
+  - cashiers: patients ready to pay and insurance claim outcomes
+  - admins: low stock, claims, trial ending and overdue payment
+- Nobody is told about their own action, and repeated alerts don't pile up.
+
+### 5.13 Audit trail
 - **Every change** to clinical, billing and other records, **every read of patient data**, and **every security event** (sign-ins, lockouts, resets) is recorded with who, what, when, IP and request id.
 - **Append-only:** the database itself refuses to edit or delete audit rows.
 - An admin can answer "**who has looked at this patient's record?**", which is a core requirement of health-data laws such as the NDPA.
 
-### 5.13 Self-serve signup
+### 5.14 Self-serve signup
 - Anyone can sign up a hospital at the platform address. They choose its web address (e.g. `st-lukes.yourdomain.com`), a plan for the trial, and their admin password.
 - Nothing is created until they confirm their email. Then the hospital is created in the background (10-60 seconds) while the page shows progress, and a welcome email follows.
 - Abuse limits: email verification, rate limits per IP and per email, a hidden bot trap, and reserved addresses.
 - The platform site also has a landing page with live prices, and a "Sign in" page that sends people to their hospital's address.
 - Signing up requires accepting the terms of service and privacy policy (shown at `/terms` and `/privacy`). The accepted versions are recorded. The documents are edited and versioned in the platform admin.
 
-### 5.14 Platform (for the operator)
+### 5.15 Platform (for the operator)
 - **Operator dashboard** at `/operator` on the platform site:
   - monthly recurring revenue, money collected per month, and hospitals by state (trial, paying, overdue, lapsed, suspended)
   - who needs attention: trials ending this week, overdue hospitals, lapsed hospitals, stuck signups

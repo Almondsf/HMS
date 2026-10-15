@@ -41,3 +41,28 @@ class SmsMessage(TrackingModel):
 
     def __str__(self):
         return f'{self.get_kind_display()} to {self.to or "?"}: {self.get_status_display()}'
+
+
+class Notification(models.Model):
+    '''A message in a staff member's notification centre (the bell in the web app).'''
+
+    class Level(models.TextChoices):
+        INFO = 'info', 'Information'
+        WARNING = 'warning', 'Needs attention'
+        URGENT = 'urgent', 'Urgent'
+
+    recipient = models.ForeignKey('authentication.User', on_delete=models.CASCADE, related_name='notifications')
+    kind = models.CharField(max_length=50)  # the event, e.g. lab.result_completed
+    level = models.CharField(max_length=10, choices=Level.choices, default=Level.INFO)
+    title = models.CharField(max_length=150)
+    body = models.CharField(max_length=300, blank=True)
+    link = models.CharField(max_length=200, blank=True, help_text='Screen in the web app, e.g. /visits/12')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['recipient', 'read_at'])]
+
+    def __str__(self):
+        return f'{self.recipient}: {self.title}'

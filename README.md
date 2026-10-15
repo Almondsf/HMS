@@ -144,6 +144,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
 | `database_report` | JSON summary per schema (row counts, migrations, audit protection), used to verify backups |
 | `launch_check [--email you@x.com] [--sms <number>]` | Is this deployment ready for real hospitals? Checks domains, email, Paystack, prices, Sentry, SMS and the legal text, optionally sends a test email and SMS, and lists what to fix. Exits with 1 while something blocks launch |
+| `run_hourly` | The hourly cron job: SMS appointment reminders and subscription notices to hospital admins |
 | `export_hospital --schema <hospital> [--output file.zip]` | All of a hospital's records as a ZIP of CSV files, e.g. for a hospital that has left. Contains patient data: hand it over securely |
 | `process_signups [--retry-failed]` | Finish hospital setups interrupted part-way (e.g. by a deploy) and delete signups never verified. Runs on every deploy |
 | `seed_demo --schema <hospital>` | **Local/demo only:** realistic mock data (30 days of visits, billing, claims, a live queue). Creates demo staff with a shared password, so never run it on a live server |
@@ -222,6 +223,27 @@ Hospital admins can download everything their hospital has recorded under *Setti
 - **Formulas:** text a spreadsheet would run as a formula is prefixed with `'`.
 - **Lapsed hospitals:** export still works when a hospital is read-only, because hospitals own their data.
 - **On a hospital's behalf** (e.g. after it leaves): `export_hospital`.
+
+### Notifications
+
+Staff get notified in the web app (the bell in the header, and a Notifications page) when something needs them. Each notification links to the screen to open.
+
+| When | Who |
+|---|---|
+| A patient joins a doctor's queue (walk-in or check-in) | That doctor |
+| Emergency triage or critical vital signs (urgent) | That doctor and the nurses |
+| Lab tests ordered / all results ready | Lab technicians / the ordering doctor |
+| A consultation includes prescriptions | Pharmacists |
+| A visit is completed with an unpaid invoice | Cashiers |
+| A drug is running low | Pharmacists and admins |
+| An insurer approves, rejects or pays a claim | Cashiers and admins |
+| An appointment is booked or cancelled | The doctor |
+| The trial ends in 7, 3 or 1 days, payment is overdue, or records are read-only | Hospital admins |
+
+- **Rules:** nobody is notified about their own action. A repeat alert (e.g. low stock on every dispense) isn't added while an identical one is unread. Inactive staff get nothing.
+- **Under the hood:** notifications come from the domain events ([notifications/alerts.py](notifications/alerts.py)), so adding one is a single handler.
+- **Subscription notices** come from `notify_subscription_status`. It runs in the hourly job (`run_hourly`, the `hms-reminders` cron job) together with the SMS reminders.
+- **API:** `GET /api/v1/notifications/` (`?unread=true`), `GET .../unread-count/` (the app checks every 30 seconds), `POST .../<id>/read/`, `POST .../read-all/`.
 
 ### Patient SMS
 

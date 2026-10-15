@@ -63,14 +63,15 @@ services:
       - key: SMS_SENDER_ID
         sync: false
 
-  # Appointment reminders: hourly; each hospital's reminders go out once its morning
-  # reaches SMS_REMINDER_HOUR. Only needed once SMS is set up. Settings come from the web service.
+  # Hourly jobs (manage.py run_hourly): SMS appointment reminders, sent once each hospital's
+  # morning reaches SMS_REMINDER_HOUR, and trial/overdue notices for hospital admins.
+  # Settings come from the web service.
   - type: cron
     name: hms-reminders
     runtime: docker
     dockerfilePath: ./Dockerfile
     schedule: "0 * * * *"
-    dockerCommand: python manage.py send_appointment_reminders
+    dockerCommand: python manage.py run_hourly
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: hms.settings.prod

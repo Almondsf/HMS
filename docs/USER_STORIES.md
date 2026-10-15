@@ -58,6 +58,13 @@ As a staff member, I want to change my password, so that I can keep my account s
 As a staff member given a temporary password, I want to be made to choose my own at next sign-in, so that the admin doesn't know my password.
 - Until I change it, every screen redirects me to "Change password".
 
+**ACC-6 ✅ Know what needs me**
+As a staff member, I want to be notified when something needs me (a patient waiting, results ready, a prescription to fill, a patient ready to pay), so that nothing waits because nobody noticed.
+- A bell in the header shows how many unread notifications I have, updated every 30 seconds.
+- Opening a notification marks it read and takes me to the right screen.
+- Urgent ones (emergencies, critical vitals) stand out.
+- I'm never notified about something I just did myself.
+
 ---
 
 ## 2. Front desk (FD)

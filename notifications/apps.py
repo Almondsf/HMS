@@ -7,4 +7,4 @@ class NotificationsConfig(AppConfig):
     verbose_name = 'Patient messages'
 
     def ready(self):
-        from . import handlers  # noqa: F401 (subscribes to appointment events)
+        from . import alerts, handlers  # noqa: F401 (subscribe to domain events)

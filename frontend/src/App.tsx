@@ -40,6 +40,7 @@ const screens = {
   tariff: page(() => import('@/pages/admin/SetupPages'), 'TariffPage'),
   insurers: page(() => import('@/pages/admin/SetupPages'), 'InsurersPage'),
   settings: page(() => import('@/pages/admin/SettingsPage'), 'SettingsPage'),
+  notifications: page(() => import('@/pages/NotificationsPage'), 'NotificationsPage'),
   subscription: page(() => import('@/pages/admin/SubscriptionPage'), 'SubscriptionPage'),
 }
 
@@ -106,6 +107,14 @@ export function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="change-password" element={<ChangePasswordPage />} />
+        <Route
+          path="notifications"
+          element={
+            <Suspense fallback={<Spinner />}>
+              <screens.notifications />
+            </Suspense>
+          }
+        />
         {ROUTES.map(([path, Screen, roles]) => (
           <Route
             key={path}

@@ -37,3 +37,13 @@ export function todayIso(): string {
 export function titleCase(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
+
+/** "just now", "5 min ago", "3 h ago", "yesterday", then the date. */
+export function timeAgo(value: string): string {
+  const seconds = (Date.now() - new Date(value).getTime()) / 1000
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`
+  if (seconds < 86_400) return `${Math.floor(seconds / 3600)} h ago`
+  if (seconds < 172_800) return 'yesterday'
+  return formatDate(value)
+}

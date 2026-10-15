@@ -2,6 +2,7 @@ import { AlertTriangle, KeyRound, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router'
 
+import { NotificationBell } from '@/components/Notifications'
 import { cx } from '@/components/ui'
 import { useCurrentUser, useAuth } from '@/lib/auth'
 import { formatDate } from '@/lib/format'
@@ -146,6 +147,7 @@ export function AppLayout() {
               <p className="text-sm font-medium text-slate-900">{user.full_name}</p>
               <p className="text-xs text-brand-600">{ROLE_LABELS[user.user_type]}</p>
             </div>
+            <NotificationBell />
             <NavLink
               to="/change-password"
               className="rounded-lg p-2 text-slate-500 hover:bg-brand-50 hover:text-brand-700"
