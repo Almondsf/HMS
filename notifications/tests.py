@@ -8,6 +8,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from rest_framework import status
 
+from audit.models import AuditEvent
 from authentication.permissions import Role
 from helpers import sms
 from helpers.testing import TenantAPITestCase, make_user
@@ -185,5 +186,8 @@ class SettingsAndHistoryTests(SmsTestCase):
         self.client.force_authenticate(make_user(Role.RECEPTIONIST))
         rows = self.client.get('/api/v1/sms-messages/', {'patient': self.patient.patientprofile.pk}).data['results']
         self.assertEqual(len(rows), 1)
+        # Reading them is audited against the patient, like other patient data
+        read = AuditEvent.objects.filter(action='list', resource_type__icontains='smsmessage').latest('occurred_at')
+        self.assertEqual(read.metadata['patient_ids'], [self.patient.patientprofile.pk])
         self.client.force_authenticate(make_user(Role.DOCTOR))
         self.assertEqual(self.client.get('/api/v1/sms-messages/').status_code, status.HTTP_403_FORBIDDEN)

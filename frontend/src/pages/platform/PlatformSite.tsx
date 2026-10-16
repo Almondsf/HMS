@@ -221,10 +221,12 @@ function LandingPage() {
 function FindHospitalPage() {
   const [address, setAddress] = useState('')
   const clean = address.trim().toLowerCase()
+  // Only a hospital name can go before the domain: never another website's address
+  const valid = /^[a-z][a-z0-9-]{1,38}[a-z0-9]$/.test(clean)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (clean) window.location.assign(hospitalAppUrl(clean, '/login'))
+    if (valid) window.location.assign(hospitalAppUrl(clean, '/login'))
   }
 
   return (
@@ -243,6 +245,7 @@ function FindHospitalPage() {
           autoCorrect="off"
           required
           hint={clean ? `${clean}.${tenantBaseDomain()}` : `yourhospital.${tenantBaseDomain()}`}
+          error={clean && !valid ? 'Just the name, e.g. st-lukes (letters, digits and hyphens)' : undefined}
         />
         <Button type="submit" className="w-full">
           Continue

@@ -278,6 +278,9 @@ SESSION_COOKIE_HTTPONLY = True
 
 # Cache keys are prefixed with the hospital schema, so throttling and any
 # cached data never leak between hospitals
+# Lockout and failed-attempt logging for every sign-in, including the Django admin
+AUTHENTICATION_BACKENDS = ['authentication.backends.LockoutModelBackend']
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

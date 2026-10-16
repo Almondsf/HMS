@@ -1,4 +1,7 @@
+import base64
+import hashlib
 import json
+import re
 import tempfile
 from datetime import timedelta
 from pathlib import Path
@@ -117,6 +120,18 @@ class WebAppTests(TenantAPITestCase):
                         html = response.content.decode()
                         self.assertIn('window.__HMS_CONFIG__ = {"tenantBaseDomain": "hms.example", "apiUrl": ""', html)
                         self.assertEqual(response['Cache-Control'], 'no-cache')
+
+    def test_content_security_policy_allows_exactly_the_config_script(self):
+        with tempfile.TemporaryDirectory() as dist:
+            Path(dist, 'index.html').write_text('<html><head><title>HMS</title></head><body></body></html>')
+            with override_settings(FRONTEND_DIST=Path(dist), SENTRY_FRONTEND_DSN='https://key@o1.ingest.sentry.io/2'):
+                response = self.client.get('/')
+        policy = response['Content-Security-Policy']
+        inline = re.search(r'<script>(.*?)</script>', response.content.decode()).group(1)
+        digest = base64.b64encode(hashlib.sha256(inline.encode()).digest()).decode()
+        self.assertIn(f"script-src 'self' 'sha256-{digest}'", policy)  # the page's own script runs, nothing else
+        self.assertIn("connect-src 'self' https://o1.ingest.sentry.io", policy)
+        self.assertIn("frame-ancestors 'none'", policy)
 
     def test_without_a_built_app_paths_go_to_the_api_docs(self):
         with tempfile.TemporaryDirectory() as empty, override_settings(FRONTEND_DIST=Path(empty)):

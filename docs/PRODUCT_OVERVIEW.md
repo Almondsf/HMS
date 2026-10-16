@@ -316,7 +316,8 @@ AuditEvent (append-only, references any of the above)
 |---|---|
 | Hospital data isolation | Separate Postgres schema per hospital; tokens bound to their hospital |
 | Stolen sessions | httpOnly refresh cookie, 15-min access tokens, rotation and revocation |
-| Password guessing | Lockout, rate limits, Argon2 hashing, strength validation |
+| Password guessing | Lockout on every sign-in (API and Django admin), rate limits, Argon2 hashing, strength validation |
+| Injected scripts (XSS) | No raw HTML is ever rendered, and a Content-Security-Policy lets the browser run only our own scripts |
 | Insider snooping | Every patient-record read is audited; the audit log is append-only |
 | Data leaks via error reports | Sentry never receives request bodies, query strings, names or emails |
 | Leaked provider keys | Email and SMS API keys are encrypted in the database and never shown again; changes are audited |

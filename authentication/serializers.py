@@ -111,19 +111,14 @@ class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get(self.username_field, '')
 
-        # Locked accounts are refused even with the right password
+        # Locked accounts are refused even with the right password. Failed and
+        # successful attempts are counted by the authentication backend.
         user = User.objects.filter(email__iexact=email).first()
         if user and services.is_locked_out(user):
             services.record_blocked_login(user)
             raise AuthenticationFailed(self.error_messages['locked'], 'account_locked')
 
-        try:
-            data = super().validate(attrs)
-        except AuthenticationFailed:
-            services.record_failed_login(email)
-            raise
-
-        services.record_successful_login(self.user)
+        data = super().validate(attrs)
 
         # Add user info to response (frontend needs this immediately)
         data['user'] = {

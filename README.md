@@ -157,6 +157,11 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 
 Within a hospital, access is enforced on every endpoint with `authentication.permissions.allow_roles`. Superusers can do everything in their own hospital.
 
+Security around sign-in and the web app:
+- **Sign-in protection:** account lockout and failed-attempt logging apply to every password sign-in, the API and the Django admin alike ([authentication/backends.py](authentication/backends.py)).
+- **Locked to the platform:** shared platform data (hospitals, prices, subscriptions, ICD-10 codes, provider keys, legal text) can only be edited on the platform's admin, never from a hospital's.
+- **Content-Security-Policy:** the web app is served with one. Only scripts from the app's own origin run, plus its one inline config script (allowed by hash). Pages can't be framed, and error reports may only go to the Sentry host in `SENTRY_FRONTEND_DSN`.
+
 | Resource | Read | Write |
 |---|---|---|
 | Patients (`/api/v1/patients/`) | doctor, nurse, lab tech, pharmacist · patient: own | admin, receptionist |

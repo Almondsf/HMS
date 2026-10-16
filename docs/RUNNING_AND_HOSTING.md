@@ -221,6 +221,7 @@ Operator dashboard → **Providers**. Enter the new provider's details, **Send t
 - **Render logs:** JSON lines. Every line and error response carries a request id, so you can match them up.
 - `python manage.py launch_check` any time something seems off.
 - `python manage.py database_report`: row counts per hospital.
+- Known limit: rate limits (`THROTTLE_*`) are counted per server process, so with 3 workers the effective limit is up to 3× higher. Account lockout is stored in the database and isn't affected. A shared cache (e.g. Redis) would make rate limits exact if it ever matters.
 
 ### 4.6 Backups
 See [BACKUP_AND_RESTORE.md](BACKUP_AND_RESTORE.md):
@@ -256,4 +257,5 @@ The full list is in the README's [management commands](../README.md#multi-tenanc
 | Signup stuck on "Setting up" | Operator dashboard → *Signups* → **Retry**, or `python manage.py process_signups` |
 | SMS not sent | *Providers* → Termii → **Send test** (sender ID approved? DND route? balance?); the hospital switched SMS on in *Settings*; the patient has a mobile number and hasn't opted out; the monthly cap |
 | Reminders not going out | `hms-reminders` logs in Render; `SMS_REMINDER_HOUR` hasn't been reached yet in the hospital's time zone |
+| A screen is blank in the browser | Press F12 → *Console*. A "Content-Security-Policy" error means the page tried to load something from another site: report it, since the policy is in [hms/spa.py](../hms/spa.py) |
 | Paystack payment didn't extend access | Webhook URL in Paystack; the payment appears in the hospital's payment history; record it manually if needed |

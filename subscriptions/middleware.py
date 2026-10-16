@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 from django_tenants.utils import get_public_schema_name
@@ -12,7 +13,7 @@ ALWAYS_ALLOWED = (
     '/api/v1/subscription/',
     '/api/v1/hospital/export/',
     '/api/v1/notifications/',
-    '/admin/',
+    f'/{settings.ADMIN_URL}',  # wherever ADMIN_URL puts the admin
 )
 
 

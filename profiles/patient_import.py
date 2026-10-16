@@ -19,6 +19,7 @@ from .serializers import PatientSerializer
 
 MAX_ROWS = 5000
 MAX_BYTES = 5 * 1024 * 1024
+MAX_SCANNED_ROWS = 200_000  # including empty rows Excel keeps for formatting
 
 # Column -> friendly name, in template order
 COLUMNS = {
@@ -94,7 +95,15 @@ def _read_rows(upload):
             sheet = load_workbook(upload, read_only=True, data_only=True).worksheets[0]
         except Exception as exc:
             raise ImportFileError("This Excel file can't be read. Save it again as .xlsx or .csv.") from exc
-        rows = [[_text(cell) for cell in row] for row in sheet.iter_rows(values_only=True)]
+        rows = []
+        for scanned, row in enumerate(sheet.iter_rows(values_only=True)):
+            cells = [_text(cell) for cell in row]
+            if any(cells):
+                rows.append(cells)
+            if len(rows) > MAX_ROWS + 1:
+                break  # too many already: no need to read the rest
+            if scanned > MAX_SCANNED_ROWS:
+                raise ImportFileError('The sheet is too large. Delete empty rows at the bottom, or save it as CSV.')
     elif name.endswith('.csv'):
         raw = upload.read()
         for encoding in ('utf-8-sig', 'cp1252', 'latin-1'):  # latin-1 accepts any bytes
@@ -207,7 +216,7 @@ def run_import(upload, *, commit=False, skip_invalid=False):
         raise ImportFileError('The file is empty.')
     (_, header), body = rows[0], rows[1:]
     if len(body) > MAX_ROWS:
-        raise ImportFileError(f'The file has {len(body)} patients; import at most {MAX_ROWS} at a time.')
+        raise ImportFileError(f'The file has more than {MAX_ROWS:,} patients. Split it and import each part.')
     mapping, unknown = _map_header(header)
 
     existing = {

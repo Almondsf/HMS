@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from audit.mixins import AuditedReadMixin
 from authentication.permissions import Role, allow_roles
 
 from .models import Notification, SmsMessage
@@ -18,7 +19,7 @@ class SmsMessageSerializer(serializers.ModelSerializer):
         ]  # fmt: skip
 
 
-class SmsMessageViewSet(viewsets.ReadOnlyModelViewSet):
+class SmsMessageViewSet(AuditedReadMixin, viewsets.ReadOnlyModelViewSet):
     '''SMS sent to patients (or not sent, with the reason). Filter with ?patient= or ?appointment=.'''
 
     queryset = SmsMessage.objects.all()

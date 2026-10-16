@@ -1,5 +1,6 @@
 import io
 from datetime import date
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openpyxl import Workbook
@@ -94,6 +95,19 @@ class PatientImportTests(TenantAPITestCase):
         patient = PatientProfile.objects.select_related('user').get()
         self.assertEqual(patient.user.phone_number, '08031234567')
         self.assertEqual(patient.user.date_of_birth, date(1990, 12, 31))
+
+    def test_oversized_sheets_are_refused_without_reading_everything(self):
+        book = Workbook()
+        sheet = book.active
+        sheet.append(['First name', 'Last name'])
+        for n in range(6):
+            sheet.append(['Patient', f'Number {n}'])
+        stream = io.BytesIO()
+        book.save(stream)
+        with patch('profiles.patient_import.MAX_ROWS', 3):
+            response = self.upload(SimpleUploadedFile('big.xlsx', stream.getvalue()))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('more than 3', response.data['file'][0])
 
     def test_unusable_files_are_explained(self):
         cases = {
