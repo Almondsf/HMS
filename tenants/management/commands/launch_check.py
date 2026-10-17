@@ -68,6 +68,12 @@ class Command(BaseCommand):
     def site(self):
         debug = settings.DEBUG
         self.report(FAIL if debug else OK, 'Debug mode', 'ON: never in production' if debug else 'off')
+        required = settings.TWO_FACTOR_REQUIRED
+        self.report(
+            OK if required else WARN,
+            'Two-factor sign-in',
+            'required for operators and hospital admins' if required else 'not required: set TWO_FACTOR_REQUIRED=True',
+        )
         base = settings.TENANT_BASE_DOMAIN
         self.report(
             FAIL if base == 'localhost' else OK,

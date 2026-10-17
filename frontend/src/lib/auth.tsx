@@ -15,13 +15,35 @@ export interface CurrentUser {
   must_change_password: boolean
   /** Platform site superusers: may open the operator dashboard */
   is_platform_operator?: boolean
+  two_factor: TwoFactorStatus
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean
+  /** This role must use it (platform operators and hospital admins, in production) */
+  required: boolean
+  recovery_codes_left: number
+}
+
+/** Must set up two-factor sign-in before using anything else. */
+export function needsTwoFactorSetup(user: CurrentUser): boolean {
+  return user.two_factor.required && !user.two_factor.enabled
+}
+
+/** The password was right; a code from the authenticator app comes next. */
+export interface TwoFactorChallenge {
+  challenge: string
 }
 
 interface AuthState {
   user: CurrentUser | null
   /** True while checking for an existing session on page load. */
   loading: boolean
-  login: (email: string, password: string) => Promise<CurrentUser>
+  /** Signs in, or returns a challenge when a two-factor code is needed next */
+  login: (email: string, password: string) => Promise<CurrentUser | TwoFactorChallenge>
+  verifyTwoFactor: (challenge: string, code: string) => Promise<CurrentUser>
+  /** Reload the signed-in user, e.g. after turning on two-factor sign-in */
+  refreshUser: () => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -63,17 +85,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SESSION_ENDED, endSession)
   }, [endSession])
 
-  const login = useCallback(async (email: string, password: string) => {
-    // In cookie mode the refresh token arrives as an httpOnly cookie, not in the body
-    const { access } = await api<{ access: string }>('/api/v1/auth/login/', {
-      method: 'POST',
-      body: { email, password },
-      anonymous: true,
-    })
+  const startSession = useCallback(async (access: string) => {
     session.set(access)
     const me = await api<CurrentUser>('/api/v1/auth/me/')
     setUser(me)
     return me
+  }, [])
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      // In cookie mode the refresh token arrives as an httpOnly cookie, not in the body
+      const result = await api<{ access?: string; two_factor_required?: boolean; challenge?: string }>(
+        '/api/v1/auth/login/',
+        { method: 'POST', body: { email, password }, anonymous: true },
+      )
+      if (result.two_factor_required && result.challenge) return { challenge: result.challenge }
+      return startSession(result.access!)
+    },
+    [startSession],
+  )
+
+  const verifyTwoFactor = useCallback(
+    async (challenge: string, code: string) => {
+      const { access } = await api<{ access: string }>('/api/v1/auth/login/verify/', {
+        method: 'POST',
+        body: { challenge, code },
+        anonymous: true,
+      })
+      return startSession(access)
+    },
+    [startSession],
+  )
+
+  const refreshUser = useCallback(async () => {
+    setUser(await api<CurrentUser>('/api/v1/auth/me/'))
   }, [])
 
   const logout = useCallback(async () => {
@@ -85,7 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Error reports carry the user's internal id and role only
   useEffect(() => setMonitoringUser(user), [user])
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout])
+  const value = useMemo(
+    () => ({ user, loading, login, verifyTwoFactor, refreshUser, logout }),
+    [user, loading, login, verifyTwoFactor, refreshUser, logout],
+  )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

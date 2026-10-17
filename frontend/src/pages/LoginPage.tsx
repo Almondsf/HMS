@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 
 import { Button, ErrorAlert, Input } from '@/components/ui'
+import { ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { hospitalDisplayName } from '@/lib/tenant'
 
@@ -16,7 +17,7 @@ export function LoginPage({
   /** Offer "Forgot password?" (hospital sites); platform operators reset from the server */
   allowReset?: boolean
 } = {}) {
-  const { user, login } = useAuth()
+  const { user, login, verifyTwoFactor } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const hospitalName = title ?? hospitalDisplayName()
@@ -25,6 +26,10 @@ export function LoginPage({
   const [password, setPassword] = useState('')
   const [error, setError] = useState<unknown>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Two-factor step: the password was right, now the code from the app (or a recovery code)
+  const [challenge, setChallenge] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [recovery, setRecovery] = useState(false)
 
   const state = location.state as { from?: string; notice?: string } | null
   const returnTo = state?.from ?? home
@@ -35,13 +40,37 @@ export function LoginPage({
     setError(null)
     setSubmitting(true)
     try {
-      await login(email.trim(), password)
+      if (challenge) {
+        await verifyTwoFactor(challenge, code)
+      } else {
+        const result = await login(email.trim(), password)
+        if ('challenge' in result) {
+          setChallenge(result.challenge)
+          return
+        }
+      }
       navigate(returnTo, { replace: true })
     } catch (caught) {
       setError(caught)
+      // An expired step means starting again from the password
+      if (
+        challenge &&
+        caught instanceof ApiError &&
+        caught.data &&
+        (caught.data as { code?: string }).code === 'challenge_expired'
+      ) {
+        setChallenge(null)
+      }
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function startOver() {
+    setChallenge(null)
+    setCode('')
+    setRecovery(false)
+    setError(null)
   }
 
   return (
@@ -57,7 +86,7 @@ export function LoginPage({
             </svg>
           </div>
           <h1 className="text-xl font-semibold text-slate-900">{hospitalName}</h1>
-          <p className="mt-1 text-sm text-slate-500">Sign in to continue</p>
+          <p className="mt-1 text-sm text-slate-500">{challenge ? 'Two-factor sign-in' : 'Sign in to continue'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -67,32 +96,69 @@ export function LoginPage({
             </p>
           )}
           <ErrorAlert error={error} />
-          <Input
-            label="Email"
-            type="email"
-            autoComplete="username"
-            required
-            autoFocus
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <Input
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          <Button type="submit" loading={submitting} className="w-full">
-            Sign in
-          </Button>
-          {allowReset && (
-            <p className="text-center text-sm">
-              <Link to="/forgot-password" className="text-brand-600 hover:text-brand-700">
-                Forgot password?
-              </Link>
-            </p>
+          {challenge ? (
+            <>
+              <Input
+                key={recovery ? 'recovery' : 'code'}
+                label={recovery ? 'Recovery code' : 'Code from your authenticator app'}
+                autoComplete="one-time-code"
+                inputMode={recovery ? 'text' : 'numeric'}
+                placeholder={recovery ? 'xxxx-xxxx' : '123456'}
+                required
+                autoFocus
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                hint={recovery ? 'Each recovery code works once.' : 'The 6-digit code changes every 30 seconds.'}
+              />
+              <Button type="submit" loading={submitting} className="w-full">
+                Verify
+              </Button>
+              <div className="flex justify-between text-sm">
+                <button type="button" onClick={startOver} className="text-slate-600 hover:text-slate-900">
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecovery(!recovery)
+                    setCode('')
+                  }}
+                  className="text-brand-600 hover:text-brand-700"
+                >
+                  {recovery ? 'Use the app instead' : 'Lost your phone? Use a recovery code'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Email"
+                type="email"
+                autoComplete="username"
+                required
+                autoFocus
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <Input
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <Button type="submit" loading={submitting} className="w-full">
+                Sign in
+              </Button>
+              {allowReset && (
+                <p className="text-center text-sm">
+                  <Link to="/forgot-password" className="text-brand-600 hover:text-brand-700">
+                    Forgot password?
+                  </Link>
+                </p>
+              )}
+            </>
           )}
         </form>
       </div>

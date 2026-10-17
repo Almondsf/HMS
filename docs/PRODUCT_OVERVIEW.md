@@ -106,6 +106,7 @@ Key ideas:
 - Sign in with **email and password**. Sessions use short-lived access tokens (15 min) and refresh tokens (7 days) that rotate and can be revoked.
 - In the browser, the refresh token lives in an **httpOnly cookie**, so scripts can't steal it. Nothing is kept in localStorage.
 - **Account lockout** after repeated failed sign-ins. Sign-in and password-reset requests are **rate limited**.
+- **Two-factor sign-in** with an authenticator app, required for platform operators and hospital admins, optional for other staff. Recovery codes cover a lost phone, and admins can reset a colleague's.
 - **Password resets:** an admin can issue a temporary password, which the person must change at next sign-in. Staff can also reset by email link, which works once and expires in an hour.
 - Deactivating a staff member signs them out everywhere. Accounts are deactivated, never deleted, so history stays intact.
 - Tokens only work at the hospital that issued them.
@@ -317,6 +318,7 @@ AuditEvent (append-only, references any of the above)
 | Hospital data isolation | Separate Postgres schema per hospital; tokens bound to their hospital |
 | Stolen sessions | httpOnly refresh cookie, 15-min access tokens, rotation and revocation |
 | Password guessing | Lockout on every sign-in (API and Django admin), rate limits, Argon2 hashing, strength validation |
+| Stolen passwords | Two-factor sign-in (authenticator app) required for operators and hospital admins; codes work once |
 | Injected scripts (XSS) | No raw HTML is ever rendered, and a Content-Security-Policy lets the browser run only our own scripts |
 | Insider snooping | Every patient-record read is audited; the audit log is append-only |
 | Data leaks via error reports | Sentry never receives request bodies, query strings, names or emails |

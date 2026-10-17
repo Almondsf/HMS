@@ -58,6 +58,13 @@ As a staff member, I want to change my password, so that I can keep my account s
 As a staff member given a temporary password, I want to be made to choose my own at next sign-in, so that the admin doesn't know my password.
 - Until I change it, every screen redirects me to "Change password".
 
+**ACC-7 ✅ Two-factor sign-in**
+As an administrator (or anyone handling sensitive records), I want my account to need a code from my phone as well as my password, so that a stolen password alone can't open it.
+- I set it up by scanning a QR code with an authenticator app, and get 10 single-use recovery codes.
+- Each code works once, and guessing codes leads to account lockout.
+- Platform operators and hospital admins must use it. Other staff can choose to.
+- If I lose my phone, I use a recovery code, or another admin resets it.
+
 **ACC-6 ✅ Know what needs me**
 As a staff member, I want to be notified when something needs me (a patient waiting, results ready, a prescription to fill, a patient ready to pay), so that nothing waits because nobody noticed.
 - A bell in the header shows how many unread notifications I have, updated every 30 seconds.

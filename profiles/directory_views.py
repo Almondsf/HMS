@@ -4,11 +4,12 @@ from django.http import HttpResponse
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from audit.mixins import AuditedReadMixin
-from authentication import password_reset
+from authentication import password_reset, two_factor
 from authentication.models import User
 from authentication.permissions import STAFF_ROLES, Role, allow_roles
 from helpers.search import search
@@ -129,6 +130,17 @@ class StaffViewSet(viewsets.ReadOnlyModelViewSet):
         '''Issue a temporary password (shown once); they must change it at next sign-in.'''
         password = password_reset.reset_by_admin(user=self.get_object(), by=request.user)
         return Response({'temporary_password': password}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True, methods=['post'], url_path='reset-two-factor', permission_classes=[allow_roles(write=[Role.ADMIN])]
+    )
+    def reset_two_factor(self, request, pk=None):
+        '''Lost phone: remove their two-factor sign-in; they set it up again at next sign-in.'''
+        staff = self.get_object()
+        if staff.pk == request.user.pk:
+            raise PermissionDenied('Use your own two-factor settings to change your phone.')
+        two_factor.reset(staff, by=request.user)
+        return Response(two_factor.status(staff))
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):

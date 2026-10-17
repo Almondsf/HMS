@@ -18,3 +18,9 @@ class TenantsConfig(AppConfig):
         registry.register(Hospital)
 
         admin.site.site_header = admin.site.site_title = f'{settings.PRODUCT_NAME} administration'
+
+        # The admin's sign-in asks for the two-factor code too
+        from authentication.admin_forms import TwoFactorAdminAuthenticationForm
+
+        admin.site.login_form = TwoFactorAdminAuthenticationForm
+        admin.site.login_template = 'admin/two_factor_login.html'

@@ -145,7 +145,7 @@ cd frontend && npm run build     # type-checks the web app
    Keep a copy somewhere safe, e.g. a password manager. If it's lost or changed, the email and SMS keys saved in the dashboard must be entered again.
 4. **Domains.** In the `hms` service → *Settings → Custom Domains*, add `yourdomain.com` and `*.yourdomain.com`. Create the DNS records Render shows at your domain registrar. HTTPS certificates follow automatically.
 5. **Deploy.** Each deploy builds the web app and runs `migrate`, `setup_platform` and `process_signups` before going live. The health check is `/api/health/`.
-6. **Create your operator account.** In the `hms` service's *Shell* tab, run `python manage.py createsuperuser`. Sign in at `yourdomain.com/operator`.
+6. **Create your operator account.** In the `hms` service's *Shell* tab, run `python manage.py createsuperuser`. Sign in at `yourdomain.com/operator`. You'll be asked to set up **two-factor sign-in** with an authenticator app (Google or Microsoft Authenticator) straight away. **Save the recovery codes** somewhere safe, away from your phone.
 7. **Moving from the old single-hospital version** (once only): in the Shell, run
    ```bash
    python manage.py create_hospital --name "Main Hospital" --schema main --admin-email you@example.com
@@ -184,6 +184,7 @@ Set these on the `hms` service (*Environment*). The cron job reads them from the
 | `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | optional | Fallback SMTP login, used only while no email provider is chosen in the dashboard |
 | `SMS_BACKEND`, `SMS_API_KEY`, `SMS_API_URL`, `SMS_SENDER_ID` | optional | Fallback Termii settings, used only while no SMS provider is chosen in the dashboard |
 | `ADMIN_URL` | recommended | Hide the admin, e.g. `staff-portal-8f3a/` |
+| `TWO_FACTOR_REQUIRED` | optional | Default on: operators and hospital admins must use an authenticator app |
 | `SUBSCRIPTION_TRIAL_DAYS`, `SUBSCRIPTION_GRACE_DAYS` | optional | Default 14 and 7 |
 | `SMS_MONTHLY_LIMIT_PER_HOSPITAL`, `SMS_REMINDER_HOUR` | optional | Default 500 per month, at 9:00 hospital time |
 | `THROTTLE_*`, `JWT_*`, `LOGIN_*` | optional | Security tuning (defaults in .env.example) |
@@ -248,7 +249,8 @@ The full list is in the README's [management commands](../README.md#multi-tenanc
 |---|---|
 | `main.localhost` doesn't open | The servers aren't running (§2.3), or you used port 8000 for the web app: use **5173** for the app, **8000** for the API |
 | 404 at a hospital's address | No hospital has that address. Check the spelling, or `Domain` in the admin |
-| "Port already in use" | Another server is running. Close it, or start on another port: `runserver 8001` and `npm run dev -- --port 5174` |
+| "Port already in use" | Another server is running (e.g. another project on port 8000). Close it, or run the API on another port, `python manage.py runserver 8100`, and tell the web app: create `frontend/.env.local` with `VITE_API_URL=http://{hospital}.localhost:8100` (and `npm run dev -- --port 5174` if 5173 is taken too) |
+| Someone lost the phone with their authenticator app | They sign in with a **recovery code**. Without one, another hospital admin uses *Staff → Reset two-factor*, or you run `python manage.py reset_two_factor --email ... --schema <hospital>` (leave out `--schema` for an operator). Check it's really them first |
 | `password authentication failed` on startup | `DB_*` in `.env` doesn't match your Postgres login |
 | Migrations missing after pulling changes | `python manage.py migrate` (and `pip install -r requirements-dev.txt`, `npm install` if dependencies changed) |
 | Emails don't arrive (production) | *Providers* → ZeptoMail → **Send test** shows ZeptoMail's own error; check the domain is verified in ZeptoMail; check spam |

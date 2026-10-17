@@ -53,6 +53,12 @@ export function useSetStaffActive() {
   })
 }
 
+export function useResetStaffTwoFactor() {
+  return useMutation({
+    mutationFn: (id: number) => api(`/api/v1/staff/${id}/reset-two-factor/`, { method: 'POST' }),
+  })
+}
+
 export function useResetStaffPassword() {
   return useMutation({
     mutationFn: (id: number) =>

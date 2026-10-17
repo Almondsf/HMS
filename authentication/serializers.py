@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import update_last_login
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenObtainSerializer
+from rest_framework_simplejwt.settings import api_settings
 
-from . import services
+from . import services, two_factor
 from .tokens import add_tenant_claim
 
 User = get_user_model()
@@ -56,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     # True only on the platform site, for its superusers: opens the operator dashboard
     is_platform_operator = serializers.SerializerMethodField()
+    two_factor = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -76,8 +79,13 @@ class UserSerializer(serializers.ModelSerializer):
             'date_joined',
             'must_change_password',
             'is_platform_operator',
+            'two_factor',
         ]
         read_only_fields = ['id', 'email', 'user_type', 'last_login', 'date_joined', 'must_change_password']
+
+    def get_two_factor(self, user):
+        # {enabled, required, recovery_codes_left}; the app insists on setup when required and not enabled
+        return two_factor.status(user)
 
     def get_is_platform_operator(self, user):
         from django.db import connection
@@ -118,19 +126,35 @@ class LoginSerializer(TokenObtainPairSerializer):
             services.record_blocked_login(user)
             raise AuthenticationFailed(self.error_messages['locked'], 'account_locked')
 
-        data = super().validate(attrs)
+        TokenObtainSerializer.validate(self, attrs)  # checks the password, sets self.user
+        if two_factor.is_enabled(self.user):
+            # No tokens yet: the code comes next (POST login/verify/ with this challenge)
+            return {'two_factor_required': True, 'challenge': two_factor.challenge_for(self.user)}
+        return session_for(self.user)
 
-        # Add user info to response (frontend needs this immediately)
-        data['user'] = {
-            'id': self.user.id,
-            'email': self.user.email,
-            'first_name': self.user.first_name,
-            'last_name': self.user.last_name,
-            'user_type': self.user.user_type,
-            'must_change_password': self.user.must_change_password,
-        }
 
-        return data
+def session_for(user):
+    '''Tokens for a fully signed-in user, plus what the web app needs immediately.'''
+    refresh = LoginSerializer.get_token(user)
+    if api_settings.UPDATE_LAST_LOGIN:
+        update_last_login(None, user)
+    return {
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'user_type': user.user_type,
+            'must_change_password': user.must_change_password,
+        },
+    }
+
+
+class TwoFactorLoginSerializer(serializers.Serializer):
+    challenge = serializers.CharField()
+    code = serializers.CharField(max_length=20)
 
 
 class LogoutSerializer(serializers.Serializer):

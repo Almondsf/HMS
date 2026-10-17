@@ -36,6 +36,11 @@ def record_blocked_login(user):
     record('login_blocked', Category.SECURITY, actor=user, metadata={'locked_until': user.locked_until})
 
 
+def record_password_accepted(user):
+    '''The password was right; the sign-in still needs the two-factor code.'''
+    record('login_password_accepted', Category.SECURITY, actor=user)
+
+
 def record_successful_login(user):
     if user.failed_login_attempts or user.locked_until:
         User.objects.filter(pk=user.pk).update(failed_login_attempts=0, locked_until=None)

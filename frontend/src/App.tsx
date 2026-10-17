@@ -3,12 +3,13 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 
 import { Spinner } from '@/components/ui'
 import { AppLayout } from '@/layouts/AppLayout'
-import { useAuth } from '@/lib/auth'
+import { needsTwoFactorSetup, useAuth } from '@/lib/auth'
 import { ACCESS } from '@/lib/navigation'
 import type { Role } from '@/lib/roles'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ChangePasswordPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/PasswordPages'
+import { TwoFactorPage } from '@/pages/TwoFactorPage'
 import { NotFoundPage } from '@/pages/StatusPages'
 
 /** Load a screen only when first opened: smaller downloads on slow connections. */
@@ -82,6 +83,10 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (user.must_change_password && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />
   }
+  // Admins (in production) must set up two-factor sign-in before anything else
+  if (!user.must_change_password && needsTwoFactorSetup(user) && location.pathname !== '/two-factor') {
+    return <Navigate to="/two-factor" replace />
+  }
   return children
 }
 
@@ -107,6 +112,7 @@ export function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="change-password" element={<ChangePasswordPage />} />
+        <Route path="two-factor" element={<TwoFactorPage />} />
         <Route
           path="notifications"
           element={

@@ -63,6 +63,7 @@ Step-by-step instructions are in [RUNNING_AND_HOSTING.md](RUNNING_AND_HOSTING.md
 - [ ] When verified, switch to the live key (`sk_live_...`) and run `sync_paystack_plans` again.
 
 ### 1.5 Launch check
+- [ ] Set up **two-factor sign-in** on your operator account when asked at first sign-in, and store the recovery codes safely.
 - [ ] In the Render Shell, run `python manage.py launch_check --email you@example.com --sms <your mobile>`. It checks every setting above, sends a test email and SMS, and lists anything left to do. Repeat until there are no ✗ items. Review the ! items: some, like draft legal text, are fine for a pilot.
 
 ### 1.6 Production smoke test 🤝

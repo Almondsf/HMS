@@ -7,7 +7,7 @@ bypassed by signing in somewhere else.
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 
-from . import services
+from . import services, two_factor
 
 
 class LockoutModelBackend(ModelBackend):
@@ -23,6 +23,10 @@ class LockoutModelBackend(ModelBackend):
         user = super().authenticate(request, username=username, password=password, **kwargs)
         if user is None:
             services.record_failed_login(username)
+        elif two_factor.is_enabled(user):
+            # Half-way: only a correct code completes the sign-in (and resets the failure
+            # count), so wrong codes can't be retried forever by re-entering the password
+            services.record_password_accepted(user)
         else:
             services.record_successful_login(user)
         return user

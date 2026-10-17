@@ -1,0 +1,33 @@
+{% extends "admin/login.html" %}
+{% load i18n %}
+{% comment %}The Django admin's sign-in, with the two-factor code (blank if the account doesn't use it).{% endcomment %}
+
+{% block content %}
+{% if form.non_field_errors %}
+{% for error in form.non_field_errors %}
+<p class="errornote">{{ error }}</p>
+{% endfor %}
+{% endif %}
+
+<div id="content-main">
+<form action="{{ app_path }}" method="post" id="login-form">{% csrf_token %}
+  <div class="form-row">
+    {{ form.username.errors }}
+    {{ form.username.label_tag }} {{ form.username }}
+  </div>
+  <div class="form-row">
+    {{ form.password.errors }}
+    {{ form.password.label_tag }} {{ form.password }}
+  </div>
+  <div class="form-row">
+    {{ form.code.errors }}
+    {{ form.code.label_tag }} {{ form.code }}
+    <div class="help">{{ form.code.help_text }}</div>
+    <input type="hidden" name="next" value="{{ next }}">
+  </div>
+  <div class="submit-row">
+    <input type="submit" value="{% translate 'Log in' %}">
+  </div>
+</form>
+</div>
+{% endblock %}

@@ -2,17 +2,18 @@
  * The platform operator's dashboard, at <platform>/operator. Only platform
  * superusers get in (the API checks this too).
  */
-import { AlertTriangle, LogOut } from 'lucide-react'
+import { AlertTriangle, LogOut, ShieldCheck } from 'lucide-react'
 import { Suspense, type ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router'
 
 import { useOverview, type AttentionRow } from '@/api/platform'
 import { BarList, StatTile } from '@/components/charts'
 import { Button, Card, cx, EmptyState, ErrorAlert, PageHeader, Spinner } from '@/components/ui'
-import { AuthProvider, useAuth } from '@/lib/auth'
+import { AuthProvider, needsTwoFactorSetup, useAuth } from '@/lib/auth'
 import { formatDate, titleCase } from '@/lib/format'
 import { productName } from '@/lib/tenant'
 import { LoginPage } from '@/pages/LoginPage'
+import { TwoFactorPage } from '@/pages/TwoFactorPage'
 
 import { HospitalDetailPage, HospitalsPage } from './HospitalPages'
 import { naira, STATE_LABELS } from './shared'
@@ -37,6 +38,9 @@ function RequireOperator({ children }: { children: ReactNode }) {
         </EmptyState>
       </div>
     )
+  }
+  if (needsTwoFactorSetup(user) && location.pathname !== '/operator/two-factor') {
+    return <Navigate to="/operator/two-factor" replace />
   }
   return children
 }
@@ -79,6 +83,14 @@ function OperatorLayout() {
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <span className="hidden text-sm text-slate-600 sm:inline">{user?.email}</span>
+            <Link
+              to="/operator/two-factor"
+              className="rounded-lg p-2 text-slate-500 hover:bg-brand-50 hover:text-brand-700"
+              aria-label="Two-factor sign-in"
+              title="Two-factor sign-in"
+            >
+              <ShieldCheck className="size-5" />
+            </Link>
             <button
               type="button"
               onClick={() => void logout()}
@@ -245,6 +257,7 @@ export function OperatorApp() {
           <Route path="hospitals/:id" element={<HospitalDetailPage />} />
           <Route path="signups" element={<SignupsPage />} />
           <Route path="providers" element={<ProvidersPage />} />
+          <Route path="two-factor" element={<TwoFactorPage home="/operator" />} />
           <Route path="*" element={<Navigate to="/operator" replace />} />
         </Route>
       </Routes>

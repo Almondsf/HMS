@@ -6,6 +6,7 @@ import {
   useCreateStaff,
   useDepartments,
   useResetStaffPassword,
+  useResetStaffTwoFactor,
   useSetStaffActive,
   useStaff,
   type StaffRole,
@@ -107,6 +108,7 @@ export function StaffPage() {
   const { data: staff, isLoading, error } = useStaff({ role: role || undefined, search: debounced, is_active: showInactive ? undefined : true })
   const setActive = useSetStaffActive()
   const resetPassword = useResetStaffPassword()
+  const resetTwoFactor = useResetStaffTwoFactor()
   const [temporary, setTemporary] = useState<{ name: string; password: string } | null>(null)
 
   return (
@@ -167,6 +169,22 @@ export function StaffPage() {
                     }
                   >
                     Reset password
+                  </Button>
+                )}
+                {member.id !== me.id && member.is_active && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      window.confirm(
+                        `Reset ${member.full_name}'s two-factor sign-in (lost phone)? They'll set it up again at their next sign-in. Check it's really them first.`,
+                      ) &&
+                      resetTwoFactor.mutate(member.id, {
+                        onSuccess: () => window.alert(`${member.full_name}'s two-factor sign-in was reset.`),
+                      })
+                    }
+                  >
+                    Reset two-factor
                   </Button>
                 )}
                 {member.id !== me.id &&

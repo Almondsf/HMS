@@ -146,6 +146,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `load_icd10 <file.csv> [--deactivate-missing]` | Load or update ICD-10 codes (`code,title` columns) for all hospitals |
 | `revoke_patient_privileges [--dry-run]` | Remove superuser/staff/admin rights from patient accounts in every schema. **Run once after upgrading**: before the registration fix, anyone could create such accounts |
 | `database_report` | JSON summary per schema (row counts, migrations, audit protection), used to verify backups |
+| `reset_two_factor --email <email> [--schema <hospital>]` | Remove someone's two-factor sign-in after they lost their phone and recovery codes (default: a platform operator). They set it up again at next sign-in. Check their identity first |
 | `launch_check [--email you@x.com] [--sms <number>]` | Is this deployment ready for real hospitals? Checks domains, email, Paystack, prices, Sentry, SMS and the legal text, optionally sends a test email and SMS, and lists what to fix. Exits with 1 while something blocks launch |
 | `run_hourly` | The hourly cron job: SMS appointment reminders and subscription notices to hospital admins |
 | `export_hospital --schema <hospital> [--output file.zip]` | All of a hospital's records as a ZIP of CSV files, e.g. for a hospital that has left. Contains patient data: hand it over securely |
@@ -159,6 +160,12 @@ Within a hospital, access is enforced on every endpoint with `authentication.per
 
 Security around sign-in and the web app:
 - **Sign-in protection:** account lockout and failed-attempt logging apply to every password sign-in, the API and the Django admin alike ([authentication/backends.py](authentication/backends.py)).
+- **Two-factor sign-in** ([authentication/two_factor.py](authentication/two_factor.py)): a 6-digit code from an authenticator app after the password, or a single-use recovery code.
+  - **Who:** required for platform operators and hospital admins when `TWO_FACTOR_REQUIRED` is on (the default in production; off in development). Optional for everyone else, from the shield icon in the header.
+  - **Before setup:** someone who must use it can only reach the sign-in endpoints until it's set up.
+  - **Protections:** each code works once, and wrong codes count towards account lockout. A correct password alone doesn't reset the failure count, so codes can't be guessed by re-entering the password. The Django admin's sign-in asks for the code too.
+  - **API:** `POST /api/v1/auth/login/` returns `{"two_factor_required": true, "challenge": ...}` instead of tokens. `POST /api/v1/auth/login/verify/` with `{challenge, code}` then signs in. Setup and management are under `/api/v1/auth/two-factor/` (`setup/`, `confirm/`, `recovery-codes/`, `disable/`).
+  - **Lost phone:** another hospital admin uses *Staff → Reset two-factor*, or the platform runs `reset_two_factor`.
 - **Locked to the platform:** shared platform data (hospitals, prices, subscriptions, ICD-10 codes, provider keys, legal text) can only be edited on the platform's admin, never from a hospital's.
 - **Content-Security-Policy:** the web app is served with one. Only scripts from the app's own origin run, plus its one inline config script (allowed by hash). Pages can't be framed, and error reports may only go to the Sentry host in `SENTRY_FRONTEND_DSN`.
 

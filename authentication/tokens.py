@@ -9,6 +9,7 @@ rejected anywhere else.
 '''
 
 from django.db import connection
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -26,7 +27,25 @@ def check_token_tenant(token):
         raise InvalidToken('Token was not issued for this hospital.')
 
 
+# Reachable before two-factor setup: sign-in, "me", password and two-factor endpoints
+SETUP_ALLOWED_PATHS = ('/api/v1/auth/', '/api/auth/')
+
+
+class TwoFactorSetupRequired(PermissionDenied):
+    default_detail = 'Set up two-factor sign-in to continue.'
+    default_code = 'two_factor_setup_required'
+
+
 class TenantJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        result = super().authenticate(request)
+        if result is not None and not request.path.startswith(SETUP_ALLOWED_PATHS):
+            from . import two_factor
+
+            if two_factor.setup_required(result[0]):
+                raise TwoFactorSetupRequired
+        return result
+
     def get_validated_token(self, raw_token):
         token = super().get_validated_token(raw_token)
         check_token_tenant(token)
