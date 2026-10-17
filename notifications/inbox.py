@@ -8,10 +8,27 @@ notification isn't repeated while an identical one (same kind and link) is
 still unread, so repeated events (e.g. low stock) don't pile up.
 '''
 
+import threading
+from contextlib import contextmanager
+
 from audit import context
 from authentication.models import User
 
+from . import emails
 from .models import Notification
+
+_paused = threading.local()
+
+
+@contextmanager
+def emails_paused():
+    '''Create notifications without emailing anyone (e.g. demo data).'''
+    _paused.on = True
+    try:
+        yield
+    finally:
+        _paused.on = False
+
 
 Level = Notification.Level
 
@@ -32,7 +49,10 @@ def notify(recipients, *, kind, title, body='', link='', level=Level.INFO, once=
         if not once:
             earlier = earlier.filter(read_at__isnull=True)
         ids -= set(earlier.values_list('recipient_id', flat=True))
-    return Notification.objects.bulk_create(
+    created = Notification.objects.bulk_create(
         Notification(recipient_id=pk, kind=kind, title=title[:150], body=body[:300], link=link, level=level)
         for pk in sorted(ids)
     )
+    if not getattr(_paused, 'on', False):
+        emails.send_important(created)  # urgent and subscription notices go out by email right away
+    return created

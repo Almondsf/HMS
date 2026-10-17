@@ -71,6 +71,7 @@ As a staff member, I want to be notified when something needs me (a patient wait
 - Opening a notification marks it read and takes me to the right screen.
 - Urgent ones (emergencies, critical vitals) stand out.
 - I'm never notified about something I just did myself.
+- Urgent alerts also reach me by email, and I can get a morning summary of what's waiting. I choose which emails I get, and they never name patients.
 
 ---
 

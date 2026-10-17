@@ -187,13 +187,15 @@ Set these on the `hms` service (*Environment*). The cron job reads them from the
 | `TWO_FACTOR_REQUIRED` | optional | Default on: operators and hospital admins must use an authenticator app |
 | `SUBSCRIPTION_TRIAL_DAYS`, `SUBSCRIPTION_GRACE_DAYS` | optional | Default 14 and 7 |
 | `SMS_MONTHLY_LIMIT_PER_HOSPITAL`, `SMS_REMINDER_HOUR` | optional | Default 500 per month, at 9:00 hospital time |
+| `NOTIFICATION_DIGEST_HOUR` | optional | When the morning notification emails go out, in hospital time (default 7) |
 | `THROTTLE_*`, `JWT_*`, `LOGIN_*` | optional | Security tuning (defaults in .env.example) |
 
 ### 3.4 Scheduled jobs
 
-`hms-reminders` runs `python manage.py run_hourly` every hour. That does two things:
+`hms-reminders` runs `python manage.py run_hourly` every hour. That does three things:
 - **SMS reminders** for tomorrow's appointments, sent once each hospital's morning reaches `SMS_REMINDER_HOUR`
 - **Notices to hospital admins:** the trial ends in 7, 3 or 1 days, payment is overdue, or records are read-only
+- **Morning notification emails:** each person's summary of unread notifications, once their hospital's morning reaches `NOTIFICATION_DIGEST_HOUR` (default 7:00). Urgent notifications don't wait for this: they're emailed right away
 
 Each runs once per item, so extra runs are harmless. Check it in Render → `hms-reminders` → *Logs*.
 

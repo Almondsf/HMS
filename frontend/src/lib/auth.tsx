@@ -16,6 +16,8 @@ export interface CurrentUser {
   /** Platform site superusers: may open the operator dashboard */
   is_platform_operator?: boolean
   two_factor: TwoFactorStatus
+  /** Which notifications also come by email */
+  email_notifications: 'all' | 'important' | 'off'
 }
 
 export interface TwoFactorStatus {

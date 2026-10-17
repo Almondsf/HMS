@@ -258,6 +258,12 @@ Staff get notified in the web app (the bell in the header, and a Notifications p
 
 - **Rules:** nobody is notified about their own action. A repeat alert (e.g. low stock on every dispense) isn't added while an identical one is unread. Inactive staff get nothing.
 - **Under the hood:** notifications come from the domain events ([notifications/alerts.py](notifications/alerts.py)), so adding one is a single handler.
+- **By email** ([notifications/emails.py](notifications/emails.py)):
+  - **Urgent notifications and subscription notices** are emailed right away.
+  - **The rest** go into a **morning summary** (once a day, after `NOTIFICATION_DIGEST_HOUR`, default 7:00 hospital time), listing what's still unread.
+  - **Each person chooses** on the Notifications page: everything, important only, or no emails (`email_notifications` on `/api/v1/auth/me/`).
+  - **No patient details in email:** emails never name patients. They say what happened ("Lab results are ready") and link to the app. Notices without patient data (subscription, low stock) are sent in full.
+  - **Sending:** through the active email provider. The summary is part of the hourly job (`send_notification_digests`).
 - **Subscription notices** come from `notify_subscription_status`. It runs in the hourly job (`run_hourly`, the `hms-reminders` cron job) together with the SMS reminders.
 - **API:** `GET /api/v1/notifications/` (`?unread=true`), `GET .../unread-count/` (the app checks every 30 seconds), `POST .../<id>/read/`, `POST .../read-all/`.
 

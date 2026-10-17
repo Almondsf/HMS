@@ -399,6 +399,11 @@ SMS_MONTHLY_LIMIT_PER_HOSPITAL = config('SMS_MONTHLY_LIMIT_PER_HOSPITAL', defaul
 SMS_REMINDER_HOUR = config('SMS_REMINDER_HOUR', default=9, cast=int)  # hospital time, the day before
 SMS_SEND_IN_BACKGROUND = config('SMS_SEND_IN_BACKGROUND', default=True, cast=bool)
 
+# Notifications by email: important ones right away (in the background), the rest in
+# a morning summary sent once the hospital's day reaches this hour
+NOTIFICATION_EMAILS_IN_BACKGROUND = config('NOTIFICATION_EMAILS_IN_BACKGROUND', default=True, cast=bool)
+NOTIFICATION_DIGEST_HOUR = config('NOTIFICATION_DIGEST_HOUR', default=7, cast=int)
+
 # Encrypts the provider API keys saved in the operator dashboard. Generate once with
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # and never change it casually: saved keys would have to be entered again.

@@ -80,6 +80,7 @@ class UserSerializer(serializers.ModelSerializer):
             'must_change_password',
             'is_platform_operator',
             'two_factor',
+            'email_notifications',
         ]
         read_only_fields = ['id', 'email', 'user_type', 'last_login', 'date_joined', 'must_change_password']
 

@@ -22,7 +22,7 @@ from clinical.models import Consultation, Visit, VitalSigns
 from insurance.models import Claim
 from lab.models import TestOrder
 from notifications import alerts
-from notifications.inbox import Level, notify, staff
+from notifications.inbox import Level, emails_paused, notify, staff
 from notifications.models import Notification
 from pharmacy.models import Drug
 from profiles.models import RecordSequence
@@ -55,7 +55,8 @@ class Command(BaseCommand):
             if reset:
                 Notification.objects.all().delete()
             start = timezone.now()
-            self.make()
+            with emails_paused():  # demo data: email nobody
+                self.make()
             created = Notification.objects.filter(created_at__gte=start).select_related('recipient')
             self.spread_over_time(list(created))
             by_role = Counter(n.recipient.get_user_type_display() for n in created)

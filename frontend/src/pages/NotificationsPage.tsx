@@ -1,9 +1,55 @@
+import { useMutation } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
 import { useState } from 'react'
 
 import { useMarkAllRead, useNotifications, useUnreadCount } from '@/api/notifications'
 import { NotificationItem } from '@/components/Notifications'
 import { Button, Card, cx, EmptyState, ErrorAlert, PageHeader, Spinner } from '@/components/ui'
+import { api } from '@/lib/api'
+import { useAuth, useCurrentUser, type CurrentUser } from '@/lib/auth'
+
+const EMAIL_CHOICES: { value: CurrentUser['email_notifications']; label: string }[] = [
+  { value: 'all', label: 'Important notices right away, and a morning summary' },
+  { value: 'important', label: 'Important notices only (emergencies, account notices)' },
+  { value: 'off', label: 'No emails' },
+]
+
+/** Emails never name patients: they say what happened and link here. */
+function EmailPreference() {
+  const user = useCurrentUser()
+  const { refreshUser } = useAuth()
+  const save = useMutation({
+    mutationFn: (choice: CurrentUser['email_notifications']) =>
+      api('/api/v1/auth/me/', { method: 'PATCH', body: { email_notifications: choice } }),
+    onSuccess: () => refreshUser(),
+  })
+
+  return (
+    <Card className="mt-6 space-y-3 p-5">
+      <label htmlFor="email-notifications" className="block font-medium text-slate-900">
+        Email me
+      </label>
+      <select
+        id="email-notifications"
+        value={user.email_notifications}
+        disabled={save.isPending}
+        onChange={(event) => save.mutate(event.target.value as CurrentUser['email_notifications'])}
+        className="block w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+      >
+        {EMAIL_CHOICES.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+      <p className="text-sm text-slate-500">
+        Sent to {user.email}. For privacy, emails never include patients' names: they say what happened and link back
+        here.
+      </p>
+      <ErrorAlert error={save.error} />
+    </Card>
+  )
+}
 
 export function NotificationsPage() {
   const [unreadOnly, setUnreadOnly] = useState(false)
@@ -54,7 +100,10 @@ export function NotificationsPage() {
         {isLoading ? (
           <Spinner />
         ) : !data?.results.length ? (
-          <EmptyState icon={<Bell className="size-5" />} title={unreadOnly ? "You're all caught up" : 'No notifications yet'} />
+          <EmptyState
+            icon={<Bell className="size-5" />}
+            title={unreadOnly ? "You're all caught up" : 'No notifications yet'}
+          />
         ) : (
           <div className="divide-y divide-slate-100">
             {data.results.map((notification) => (
@@ -73,6 +122,7 @@ export function NotificationsPage() {
           </Button>
         </div>
       )}
+      <EmailPreference />
     </>
   )
 }

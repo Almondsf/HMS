@@ -59,6 +59,7 @@ class Notification(models.Model):
     link = models.CharField(max_length=200, blank=True, help_text='Screen in the web app, e.g. /visits/12')
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     read_at = models.DateTimeField(null=True, blank=True)
+    emailed_at = models.DateTimeField(null=True, blank=True)  # on its own or in a daily summary
 
     class Meta:
         ordering = ['-created_at']

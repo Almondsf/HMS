@@ -178,6 +178,7 @@ Key ideas:
   - cashiers: patients ready to pay and insurance claim outcomes
   - admins: low stock, claims, trial ending and overdue payment
 - Nobody is told about their own action, and repeated alerts don't pile up.
+- **By email:** urgent alerts and subscription notices are emailed right away, and everything else goes into a morning summary. Each person chooses what they get. Emails never name patients; they link back to the app.
 
 ### 5.13 Audit trail
 - **Every change** to clinical, billing and other records, **every read of patient data**, and **every security event** (sign-ins, lockouts, resets) is recorded with who, what, when, IP and request id.
@@ -333,7 +334,7 @@ AuditEvent (append-only, references any of the above)
 
 | Item | Status |
 |---|---|
-| Notifications by email or phone push (in-app is built) | Next candidate; would reuse the same rules |
+| Phone push notifications (in-app and email are built) | Would reuse the same rules |
 | Patient-facing web or mobile app | Not started; the API already supports patient logins |
 | Inpatient care (wards, beds, admissions), theatre, maternity | Not started |
 | Enterprise features (SSO, multi-branch, custom domains) | Phase 5 |
