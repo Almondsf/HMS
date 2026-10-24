@@ -1,0 +1,2 @@
+# Load testing only (not installed with the app or in CI). See loadtest/locustfile.py.
+locust==2.47.0

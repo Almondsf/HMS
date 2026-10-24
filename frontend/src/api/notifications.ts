@@ -1,6 +1,7 @@
 /** The signed-in person's notification centre (the bell). */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { liveInterval } from '@/lib/activity'
 import { api, type Page } from '@/lib/api'
 
 export interface Notification {
@@ -24,7 +25,7 @@ export function useUnreadCount() {
     queryKey: [...KEY, 'unread-count'],
     queryFn: () => api<{ count: number }>('/api/v1/notifications/unread-count/'),
     select: (data) => data.count,
-    refetchInterval: 30_000,
+    refetchInterval: liveInterval(30_000),
     refetchIntervalInBackground: false,
   })
 }

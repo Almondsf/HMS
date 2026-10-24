@@ -1,6 +1,7 @@
 /** Lab orders and results, the test catalogue, the drug list and dispensing. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { liveInterval } from '@/lib/activity'
 import { api, type Page } from '@/lib/api'
 
 // ---- Lab ----
@@ -50,7 +51,7 @@ export function useLabOrders(status: OrderStatus) {
         query: { status, ordering: status === 'completed' ? '-ordered_at' : 'ordered_at', page_size: 50 },
       }),
     select: (page) => page.results,
-    refetchInterval: 30_000,
+    refetchInterval: liveInterval(30_000),
   })
 }
 
@@ -137,7 +138,7 @@ export function usePendingPrescriptions() {
         query: { pending: true, ordering: 'created_at', page_size: 100 },
       }),
     select: (page) => page.results,
-    refetchInterval: 30_000,
+    refetchInterval: liveInterval(30_000),
   })
 }
 

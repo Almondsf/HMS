@@ -129,6 +129,7 @@ Real users find what tests can't. Start small, ideally clinics you can visit.
 - [ ] **Moving records in:** if a pilot has existing patient records (spreadsheet or old system), plan an import. 🤖 can build an importer once there's a sample file.
 - [ ] **Weekly check-in** with each pilot: what's slow, what's missing, what's confusing. Keep a list.
 - [ ] **Watch Sentry** for errors, and fix them fast during the pilot.
+- [ ] Before adding many more hospitals, run the **load test** on a staging copy ([RUNNING_AND_HOSTING.md](RUNNING_AND_HOSTING.md#6-capacity-and-scaling) §6) to know how many hospitals one instance carries.
 
 **Stage 3 is done when** the pilots have used HMS daily for about a month, the top issues are fixed, and at least one is paying.
 

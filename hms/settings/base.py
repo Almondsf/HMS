@@ -399,6 +399,10 @@ SMS_MONTHLY_LIMIT_PER_HOSPITAL = config('SMS_MONTHLY_LIMIT_PER_HOSPITAL', defaul
 SMS_REMINDER_HOUR = config('SMS_REMINDER_HOUR', default=9, cast=int)  # hospital time, the day before
 SMS_SEND_IN_BACKGROUND = config('SMS_SEND_IN_BACKGROUND', default=True, cast=bool)
 
+# The audit log is never deleted automatically; archive_audit_log can archive and remove
+# entries, but never ones younger than this
+AUDIT_MIN_RETENTION_DAYS = config('AUDIT_MIN_RETENTION_DAYS', default=365, cast=int)
+
 # Notifications by email: important ones right away (in the background), the rest in
 # a morning summary sent once the hospital's day reaches this hour
 NOTIFICATION_EMAILS_IN_BACKGROUND = config('NOTIFICATION_EMAILS_IN_BACKGROUND', default=True, cast=bool)

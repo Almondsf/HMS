@@ -182,7 +182,7 @@ Key ideas:
 
 ### 5.13 Audit trail
 - **Every change** to clinical, billing and other records, **every read of patient data**, and **every security event** (sign-ins, lockouts, resets) is recorded with who, what, when, IP and request id.
-- **Append-only:** the database itself refuses to edit or delete audit rows.
+- **Append-only:** the database itself refuses to edit or delete audit rows. Old entries can only be archived (exported, then removed) deliberately, never younger than a year.
 - An admin can answer "**who has looked at this patient's record?**", which is a core requirement of health-data laws such as the NDPA.
 
 ### 5.14 Self-serve signup

@@ -1,6 +1,7 @@
 /** Patients, staff, appointments, visits and the queue. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { liveInterval } from '@/lib/activity'
 import { api, type Page } from '@/lib/api'
 
 // ---- Types (mirror the API) ----
@@ -201,6 +202,6 @@ export function useQueue(doctor?: number | '') {
   return useQuery({
     queryKey: ['queue', doctor],
     queryFn: () => api<QueueEntry[]>('/api/v1/queue/', { query: { doctor } }),
-    refetchInterval: 15_000, // live board
+    refetchInterval: liveInterval(15_000), // live board; slower when nobody's at the computer
   })
 }

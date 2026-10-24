@@ -7,6 +7,7 @@ import { BrowserRouter } from 'react-router'
 
 import { App } from './App'
 import { CrashScreen } from './components/CrashScreen'
+import { trackActivity } from './lib/activity'
 import { ApiError } from './lib/api'
 import { AuthProvider } from './lib/auth'
 import { ErrorBoundary, initMonitoring } from './lib/monitoring'
@@ -37,6 +38,9 @@ const queryClient: QueryClient = new QueryClient({
     },
   },
 })
+
+// Someone came back to an idle screen: refresh what's on it straight away
+trackActivity(() => void queryClient.refetchQueries({ type: 'active' }))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

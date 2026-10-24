@@ -149,6 +149,7 @@ Endpoints of a module the plan doesn't include return 403 with an explanation.
 | `reset_two_factor --email <email> [--schema <hospital>]` | Remove someone's two-factor sign-in after they lost their phone and recovery codes (default: a platform operator). They set it up again at next sign-in. Check their identity first |
 | `launch_check [--email you@x.com] [--sms <number>]` | Is this deployment ready for real hospitals? Checks domains, email, Paystack, prices, Sentry, SMS and the legal text, optionally sends a test email and SMS, and lists what to fix. Exits with 1 while something blocks launch |
 | `run_hourly` | The hourly cron job: SMS appointment reminders and subscription notices to hospital admins |
+| `archive_audit_log --before <date> --output <folder> [--delete]` | Archive old audit log entries to .csv.gz files and optionally remove them. Never automatic, never younger than `AUDIT_MIN_RETENTION_DAYS` (365) |
 | `export_hospital --schema <hospital> [--output file.zip]` | All of a hospital's records as a ZIP of CSV files, e.g. for a hospital that has left. Contains patient data: hand it over securely |
 | `process_signups [--retry-failed]` | Finish hospital setups interrupted part-way (e.g. by a deploy) and delete signups never verified. Runs on every deploy |
 | `seed_notifications --schema <hospital> [--reset]` | **Demo only:** fill a demo hospital's notification centres with realistic notifications from its records (run by `seed_demo`; refuses hospitals without demo data) |
@@ -461,7 +462,7 @@ request → view (permissions, scoping) → serializer (input shape) → service
 
 Every change to a registered model (via the API, admin or shell), every read of patient data, and every security event is written to `audit.AuditEvent`. Each event stores the actor, role, resource, patient, field-level changes, IP, user agent and request id.
 
-- **Append-only:** updates and deletes are refused by the model and by a Postgres trigger.
+- **Append-only:** updates and deletes are refused by the model and by a Postgres trigger. The only exception is `archive_audit_log --delete`, which removes entries it has just archived, older than the retention minimum.
 - **Find everyone who accessed a patient:** `GET /api/v1/audit/events/?patient=<id>`. Other filters: `category`, `action`, `actor_id`, `resource_type`, `resource_id`, `request_id`, `since`, `until`.
 - **Registering a model:** done in its app's `AppConfig.ready()`:
   ```python

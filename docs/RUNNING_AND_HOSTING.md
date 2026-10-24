@@ -224,7 +224,7 @@ Operator dashboard → **Providers**. Enter the new provider's details, **Send t
 - **Render logs:** JSON lines. Every line and error response carries a request id, so you can match them up.
 - `python manage.py launch_check` any time something seems off.
 - `python manage.py database_report`: row counts per hospital.
-- Known limit: rate limits (`THROTTLE_*`) are counted per server process, so with 3 workers the effective limit is up to 3× higher. Account lockout is stored in the database and isn't affected. A shared cache (e.g. Redis) would make rate limits exact if it ever matters.
+- Known limit: rate limits (`THROTTLE_*`) are counted per server process, so with several workers the effective limit is a few times higher. Account lockout is stored in the database and isn't affected. A shared cache (e.g. Redis) would make rate limits exact if it ever matters.
 
 ### 4.6 Backups
 See [BACKUP_AND_RESTORE.md](BACKUP_AND_RESTORE.md):
@@ -242,6 +242,21 @@ Admin → *Terms and privacy*: add the new version, untick *draft*, then use the
 
 ### 4.9 All commands
 The full list is in the README's [management commands](../README.md#multi-tenancy) table. The ones you'll use most: `launch_check`, `create_hospital`, `sync_paystack_plans`, `export_hospital`, `process_signups`, `database_report`, `createsuperuser`.
+
+---
+
+### 4.10 Audit log retention
+The audit log records every view and change of patient data, so it's the fastest-growing table. Nothing is deleted automatically. When you've decided a retention period (with your lawyer: health records have legal retention rules), run it deliberately, e.g. once a year:
+
+```bash
+python manage.py archive_audit_log --before 2025-01-01 --output /tmp/audit-archive            # export only
+python manage.py archive_audit_log --before 2025-01-01 --output /tmp/audit-archive --delete   # export, then remove
+```
+
+- **What it writes:** one compressed CSV file per hospital.
+- **When it deletes:** only with `--delete`, only what it just exported, and never entries younger than `AUDIT_MIN_RETENTION_DAYS` (365).
+- **Where to keep the files:** they contain personal data, so download them from the Render Shell and store them securely, like backups.
+- **The database's protection stays on:** it still refuses any edit to the log, and any deletion made outside this command.
 
 ---
 
@@ -263,3 +278,64 @@ The full list is in the README's [management commands](../README.md#multi-tenanc
 | Reminders not going out | `hms-reminders` logs in Render; `SMS_REMINDER_HOUR` hasn't been reached yet in the hospital's time zone |
 | A screen is blank in the browser | Press F12 → *Console*. A "Content-Security-Policy" error means the page tried to load something from another site: report it, since the policy is in [hms/spa.py](../hms/spa.py) |
 | Paystack payment didn't extend access | Webhook URL in Paystack; the payment appears in the hospital's payment history; record it manually if needed |
+
+---
+
+## 6. Capacity and scaling
+
+**At pilot size, one Render instance is plenty.** Add capacity when measurements say so, not in advance.
+
+### 6.1 Where the load comes from
+Mostly screens that refresh themselves:
+
+| Screen | How often |
+|---|---|
+| Queue | Every 15 s |
+| Lab and pharmacy lists, notification bell | Every 30 s |
+
+So a hospital with 30 staff online sends roughly 2–3 requests per second all day. Already in place to keep that down:
+- **Hidden tabs** don't refresh at all.
+- **Idle screens slow down:** when nobody has touched the computer for 5 minutes, they refresh every 2 minutes, and catch up the moment someone returns ([frontend/src/lib/activity.ts](../frontend/src/lib/activity.ts)).
+- **Light requests:** each of these refreshes is three small database queries (the hospital, the user, the answer).
+
+### 6.2 Server settings
+On the `hms` service:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `WEB_CONCURRENCY` | 3 | Worker processes |
+| `GUNICORN_THREADS` | 4 | Threads per worker. A slow request (an export, a provider call) doesn't hold up the others |
+
+**Database connections:** each thread keeps its own, so one instance uses up to `WEB_CONCURRENCY × GUNICORN_THREADS` (12 by default), plus a few for the cron job and deploys. Keep the total across instances under your Postgres plan's connection limit.
+
+### 6.3 Measure it: the load test
+[loadtest/locustfile.py](../loadtest/locustfile.py) simulates staff:
+- the front desk watching the queue
+- doctors opening visits
+- nurses, cashiers, lab and pharmacy at their screens
+- everyone's notification bell
+
+**Run it against a staging copy, never production:**
+1. Create a second Render service from the blueprint, with its own database, and load demo data with `seed_demo`.
+2. Set `THROTTLE_USER=100000/hour` on it, because the simulated staff share a few accounts.
+3. From your computer:
+   ```bash
+   pip install -r loadtest/requirements.txt
+   locust -f loadtest/locustfile.py --host https://main.staging.yourdomain.com
+   ```
+4. Open http://localhost:8089 and add simulated staff gradually: one user is one staff member with the app open. Watch requests per second, response times (look at the 95th percentile) and failures.
+
+**Reading the results:** the number of staff you can reach while 95% of requests stay under about half a second, divided by staff per hospital, is roughly how many hospitals one instance carries. Repeat after big changes.
+
+### 6.4 When to add what
+
+| When | Add | Why |
+|---|---|---|
+| Response times climb in the load test or Sentry | More `WEB_CONCURRENCY`, a bigger instance, then a second instance | More requests at once |
+| More than one instance | **Redis** (Render Key Value) as the shared cache and a job queue | Exact rate limits; cached hospital and user lookups; retries for background work (signup setup, SMS, emails) |
+| Instances × threads near the database's connection limit | A bigger Postgres plan, then connection pooling (PgBouncer) | More connections |
+| Deploys get slow (every deploy migrates every hospital) | Parallel migrations on deploy | Keeps deploys quick |
+| Reports or exports slow the clinics down | A read-only copy of the database for them | Heavy reads off the main database |
+| Hundreds of hospitals | Live updates (server push) instead of refreshing; monthly partitions for the audit log; spreading hospitals over several databases | The design (a separate schema per hospital) allows all of this |
+
+Cloudflare in front of your domain (free) is worth adding at launch: it serves the app's files from nearby and absorbs attacks.

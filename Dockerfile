@@ -41,4 +41,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
     CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ[\"PORT\"]}/api/health/')" || exit 1
 
-CMD ["sh", "-c", "gunicorn hms.wsgi --bind 0.0.0.0:${PORT} --workers ${WEB_CONCURRENCY:-3} --timeout 120 --access-logfile -"]
+# Worker processes x threads each: a slow request (an export, a provider call) doesn't hold up the
+# others. Every thread keeps its own database connection: WEB_CONCURRENCY x GUNICORN_THREADS per instance.
+CMD ["sh", "-c", "gunicorn hms.wsgi --bind 0.0.0.0:${PORT} --workers ${WEB_CONCURRENCY:-3} --worker-class gthread --threads ${GUNICORN_THREADS:-4} --timeout 120 --access-logfile -"]
